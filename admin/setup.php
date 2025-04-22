@@ -29,6 +29,7 @@ require_once '../main_load.inc.php';
 // Parameters
 $arrayofparameters = array(
 	'MMI_YOUNITED_API_MODE_SANDBOX'=>array('type'=>'yesno','enabled'=>1),
+	
 	'MMI_YOUNITED_API_PRODUCTION'=>array('type'=>'separator', 'enabled'=>1),
 	'MMI_YOUNITED_API_PRODUCTION_TOKEN_URL'=>array('type'=>'string','enabled'=>1),
 	'MMI_YOUNITED_API_PRODUCTION_URL'=>array('type'=>'string','enabled'=>1),
@@ -37,7 +38,8 @@ $arrayofparameters = array(
 	'MMI_YOUNITED_API_PRODUCTION_WEBHOOK_PASSWORD'=>array('type'=>'securekey','enabled'=>1),
 	'MMI_YOUNITED_API_PRODUCTION_SHOPCODE'=>array('type'=>'string','enabled'=>1),
 	'MMI_YOUNITED_API_PRODUCTION_MERCHANT_REF'=>array('type'=>'string','enabled'=>1),
-	'MMI_YOUNITED_API_PRODUCTION_TOKEN'=>array('type'=>'securekey', 'enabled'=>1),
+	//'MMI_YOUNITED_API_PRODUCTION_TOKEN'=>array('type'=>'securekey', 'enabled'=>1),
+
 	'MMI_YOUNITED_API_SANDBOX'=>array('type'=>'separator', 'enabled'=>1),
 	'MMI_YOUNITED_API_SANDBOX_TOKEN_URL'=>array('type'=>'string','enabled'=>1),
 	'MMI_YOUNITED_API_SANDBOX_URL'=>array('type'=>'string','enabled'=>1),
@@ -46,7 +48,7 @@ $arrayofparameters = array(
 	'MMI_YOUNITED_API_SANDBOX_WEBHOOK_PASSWORD'=>array('type'=>'securekey','enabled'=>1),
 	'MMI_YOUNITED_API_SANDBOX_SHOPCODE'=>array('type'=>'string','enabled'=>1),
 	'MMI_YOUNITED_API_SANDBOX_MERCHANT_REF'=>array('type'=>'string','enabled'=>1),
-	'MMI_YOUNITED_API_SANDBOX_TOKEN'=>array('type'=>'securekey', 'enabled'=>1),
+	//'MMI_YOUNITED_API_SANDBOX_TOKEN'=>array('type'=>'securekey', 'enabled'=>1),
 );
 
 require_once('../../mmicommon/admin/mmisetup_1.inc.php');

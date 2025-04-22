@@ -35,6 +35,6 @@ $maturity_default_list = '12,24,48';
 echo '<pre>'.$token.'</pre>';
 $younited_service->api_shops();
 $younited_service->api_personal_loans_offers(5000);
-$younited_service->api_contract_initialize($objecttype, $objectid, $amount, 12);
+$younited_service->api_personal_loan_create($objecttype, $objectid, $amount, 12);
 
 //var_dump($object);

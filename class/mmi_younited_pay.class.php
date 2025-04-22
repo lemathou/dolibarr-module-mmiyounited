@@ -20,6 +20,15 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 				'Maturity.list' => '12,24,48'
 			]
 		],
+		'personal-loan-create' => [
+			'method' => 'POST',
+			'url' => '/pay/payments/personal-loan',
+			'content_type' => 'application/json',
+			'params' => [
+				// Beaucoup de paramètres
+			]
+		],
+		// old ?
 		'contract-initialize' => [
 			'method' => 'POST',
 			'url' => '/api/1.0/Contract',
@@ -29,6 +38,9 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			]
 		],
 	];
+
+	public $error;
+	public $errors = [];
 
 	protected $website_url;
 	protected $webhook_url;
@@ -45,6 +57,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 	protected $ShopEmail;
 	protected $ShopReference;
+	protected $MerchantReference = 'DERCYA';
 
 	protected $api_version = '2025-01-01';
 
@@ -63,14 +76,25 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$this->ShopCode = $this->sandbox_mode ?$conf->global->MMI_YOUNITED_API_SANDBOX_SHOPCODE :$conf->global->MMI_YOUNITED_API_PRODUCTION_SHOPCODE;
 		$this->ShopEmail = $conf->global->MAIN_INFO_SOCIETE_EMAIL;
 		$this->ShopReference = $conf->global->MAIN_INFO_SOCIETE_NAME;
+		$this->MerchantReference = $this->sandbox_mode ?$conf->global->MMI_YOUNITED_API_SANDBOX_MERCHANT_REF :$conf->global->MMI_YOUNITED_API_PRODUCTION_MERCHANT_REF;
 	}
 
 	public function api_token()
 	{
-		if (empty($_SESSION['younited_token']))
-			$this->api_login();
+		// @todo check if token is expired
+		if (!empty($_SESSION['younited_token']) && !empty($_SESSION['younited_token_expires']) && $_SESSION['younited_token_expires'] > time()) {
+			return $_SESSION['younited_token'];
+		}
+
+		return $this->api_login();
+	}
+
+	public function api_payment_id()
+	{
+		if (empty($_SESSION['younited_payment_id']))
+			return;
 		
-		return $_SESSION['younited_token'];
+		return $_SESSION['younited_payment_id'];
 	}
 
 	public function api_login()
@@ -83,17 +107,16 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		);
 		//var_dump($login_url, $username, $password, $post_data); die();
 
-		$response = $this->curl_request('POST', $this->login_url, http_build_query($post_data), ['Content-Type: application/x-www-form-urlencoded']);
-		if (isset($response['access_token'])) {
-			$token = $response['access_token'];
-		}
-		else {
+		$response = $this->curl_request('POST', $this->login_url, $post_data, ['Content-Type: application/x-www-form-urlencoded']);
+		if (! isset($response['access_token'])) {
 			echo 'Error: ' . $response;
 			return;
 		}
-		var_dump($token);
 
-		$_SESSION['younited_token'] = $token;
+		$_SESSION['younited_token'] = $response['access_token'];
+		$_SESSION['younited_token_expires'] = time() + $response['expires_in'];
+
+		return $response['access_token'];
 		// @todo save in database ?
 	}
 
@@ -105,6 +128,57 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	public function api_personal_loans_offers($amount, $params=[])
 	{
 		return $this->api_request('personal-loans-offers', ['Amount'=>$amount, 'ShopCode'=>$this->ShopCode, 'Maturity.list'=>$this->MaturityDefaultList]);
+	}
+
+	public function api_personal_loan_create($objecttype, $objectid, $amount, $maturity)
+	{
+		global $conf;
+
+		$object = mmi_payments::loadobject($objecttype, $objectid);
+		//var_dump($object);
+		$societe = $object->thirdparty;
+		//$contact = $object->thirdparty->;
+
+		$amount = round($object->total_ttc, 2);
+		$maturity = 24;
+
+		$params = [
+			"loanRequest" => [
+				"requestedAmount" => $amount,
+				"requestedMaturityInMonths" => $maturity,
+			],
+			"basketDescription" => [
+				"items" => [
+					[
+						"name" => "Matériel pour piscine",
+						"quantity" => 1,
+						"unitPrice" => $amount,
+					],
+				]
+			],
+			"merchantContext" => [
+				"shopCode" => $this->ShopCode,
+				"merchantReference" => $this->MerchantReference,
+			],
+			"technicalInformation" => [
+				"webhookNotificationUrl" => $this->webhook_url,
+				"apiVersion" => "2024-01-01", // $this->api_version,
+			],
+		];
+
+		$response = $this->api_request('personal-loan-create', $params);
+		if (! isset($response['paymentId'])) {
+			echo 'Error: ' . $response;
+			return;
+		}
+
+		$_SESSION['younited_payment_id'] = $response['paymentId'];
+		$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'younitedpay (objecttype, fk_object, amount, maturity, payment_id)
+			VALUES ("'.strtolower($objecttype).'", '.$objectid.', '.$amount.', '.$maturity.', "'.$response['paymentId'].'")';
+		$q = $this->db->query($sql);
+		var_dump($q, $this->db);
+		
+		return $response;
 	}
 
 	public function api_contract_initialize($objecttype, $objectid, $amount, $maturity)
@@ -199,21 +273,21 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			curl_setopt($ch, CURLOPT_URL, $url);
 			curl_setopt($ch, CURLOPT_POST, 1);
 			if (!empty($headers) && in_array('Content-Type: application/json', $headers)) {
-				var_dump(json_encode($data));
-				curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+				//var_dump($headers, json_encode($data)); die();
+				curl_setopt($ch, CURLOPT_POSTFIELDS, is_array($data) ?json_encode($data) :$data);
 			}
 			else {
-				curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+				curl_setopt($ch, CURLOPT_POSTFIELDS, is_array($data) ?http_build_query($data) :$data);
 			}
 			//curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+			//curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
 		}
 		else {
-			curl_setopt($ch, CURLOPT_URL, $url.'?'.http_build_query($data));
+			curl_setopt($ch, CURLOPT_URL, $url.'?'.(is_array($data) ?http_build_query($data) :$data));
 			var_dump($url.'?'.http_build_query($data));
 		}
-		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 		
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 		// receive server response ...
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		
