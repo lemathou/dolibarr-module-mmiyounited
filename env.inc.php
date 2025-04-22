@@ -1,0 +1,3 @@
+<?php
+
+$modulename = 'MMIYounited';

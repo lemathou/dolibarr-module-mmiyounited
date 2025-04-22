@@ -28,6 +28,8 @@ ModuleMMIYounitedDesc = Paiements par souscription de crédit via le prestataire
 MMIYounitedSetup = MMIYounited setup
 Settings = Settings
 MMIYounitedSetupPage = MMIYounited setup page
+
+MMI_YOUNITED_API_MODE_SANDBOX = Mode Sandbox (test)
 MMI_YOUNITED_API_PRODUCTION = Environnement Production
 MMI_YOUNITED_API_PRODUCTION_TOKEN_URL = URL de récupération de token de production
 MMI_YOUNITED_API_PRODUCTION_URL = URL de production
@@ -60,3 +62,5 @@ MyPageName = My page name
 #
 MyWidget = My widget
 MyWidgetDescription = My widget description
+
+MMIYounitedDoPayment = Payer avec Younited
