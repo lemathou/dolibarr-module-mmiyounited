@@ -51,4 +51,4 @@ class younitedpay_webhook_log extends CommonObject
 		$this->entity = $conf->entity;
 		$this->date_creation = dol_now();
 	}
-}0
+}
