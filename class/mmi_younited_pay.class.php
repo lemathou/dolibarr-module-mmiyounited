@@ -1,10 +1,14 @@
 <?php
 
 dol_include_once('mmicommon/class/mmi_singleton.class.php');
+dol_include_once('mmipayments/class/mmi_payments.class.php');
 
 class mmi_younited_pay extends MMI_Singleton_2_0
 {
 	const MOD_NAME = 'mmiyounited';
+
+	const CURL_DEBUG = false;
+	const API_DEBUG = false;
 
 	const ROUTES = [
 		'shops' => [
@@ -28,6 +32,28 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 				// Beaucoup de paramètres
 			]
 		],
+		'payment-info' => [
+			'method' => 'GET',
+			'url' => '/pay/payments/$id',
+			'content_type' => 'application/json',
+			'url_params' => [
+				'id',
+			],
+			'params' => [
+				// Beaucoup de paramètres
+			]
+		],
+		'payment-status' => [
+			'method' => 'GET',
+			'url' => '/pay/payments/$id/status',
+			'content_type' => 'application/json',
+			'url_params' => [
+				'id',
+			],
+			'params' => [
+				// Beaucoup de paramètres
+			]
+		],
 		// old ?
 		'contract-initialize' => [
 			'method' => 'POST',
@@ -41,6 +67,9 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 	public $error;
 	public $errors = [];
+
+	protected $payment_mode;
+	protected $account_id;
 
 	protected $website_url;
 	protected $webhook_url;
@@ -68,6 +97,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 		$this->website_url = 'https://'.$_SERVER['SERVER_NAME'];
 		$this->webhook_url = $this->website_url.'/custom/mmiyounited/webhook.php';
+		$this->webhook_url = 'https://erp.dercya.com/custom/mmiyounited/webhook.php';
 		$this->sandbox_mode = !empty($conf->global->MMI_YOUNITED_API_MODE_SANDBOX);
 		$this->login_url = $this->sandbox_mode ?$conf->global->MMI_YOUNITED_API_SANDBOX_TOKEN_URL :$conf->global->MMI_YOUNITED_API_PRODUCTION_TOKEN_URL;
 		$this->username = $this->sandbox_mode ?$conf->global->MMI_YOUNITED_API_SANDBOX_USERNAME :$conf->global->MMI_YOUNITED_API_PRODUCTION_USERNAME;
@@ -77,7 +107,11 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$this->ShopEmail = $conf->global->MAIN_INFO_SOCIETE_EMAIL;
 		$this->ShopReference = $conf->global->MAIN_INFO_SOCIETE_NAME;
 		$this->MerchantReference = $this->sandbox_mode ?$conf->global->MMI_YOUNITED_API_SANDBOX_MERCHANT_REF :$conf->global->MMI_YOUNITED_API_PRODUCTION_MERCHANT_REF;
+		$this->payment_mode = $conf->global->MMI_YOUNITED_PAYMENT_MODE;
+		$this->account_id = $conf->global->MMI_YOUNITED_ACCOUNT_ID;
 	}
+	
+	/* API LOGIN */
 
 	public function api_token()
 	{
@@ -124,6 +158,8 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	{
 		return $this->api_request('shops');
 	}
+	
+	/* API PAYMENT */
 
 	public function api_personal_loans_offers($amount, $params=[])
 	{
@@ -165,8 +201,12 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 				"apiVersion" => "2024-01-01", // $this->api_version,
 			],
 		];
+		if (static::API_DEBUG)
+			var_dump($params);
 
 		$response = $this->api_request('personal-loan-create', $params);
+		if (static::API_DEBUG)
+			var_dump($response);
 		if (! isset($response['paymentId'])) {
 			echo 'Error: ' . $response;
 			return;
@@ -176,9 +216,20 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'younitedpay (objecttype, fk_object, amount, maturity, payment_id)
 			VALUES ("'.strtolower($objecttype).'", '.$objectid.', '.$amount.', '.$maturity.', "'.$response['paymentId'].'")';
 		$q = $this->db->query($sql);
-		var_dump($q, $this->db);
+		if (static::API_DEBUG)
+			var_dump($q, $this->db);
 		
 		return $response;
+	}
+
+	public function api_payment_info($id)
+	{
+		return $this->api_request('payment-info', ['id'=>$id]);
+	}
+
+	public function api_payment_status($id)
+	{
+		return $this->api_request('payment-status', ['id'=>$id]);
 	}
 
 	public function api_contract_initialize($objecttype, $objectid, $amount, $maturity)
@@ -186,12 +237,11 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		global $conf;
 
 		$object = mmi_payments::loadobject($objecttype, $objectid);
-		//var_dump($object);
 		$societe = $object->thirdparty;
 		//$contact = $object->thirdparty->;
 
 		$params = [
-			"requestedMaturity" => $maturity ,
+			"requestedMaturity" => $maturity,
 			"segmentation" => "STANDARD",
 			// @todo use socpeople if possible, not societe
 			"personalInformation" => [
@@ -257,17 +307,47 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			}
 		}
 
-		$response = $this->curl_request($route_info['method'], $this->api_url.$route_info['url'], $data, $headers);
-		var_dump($response);
+		$url = $this->api_url.$route_info['url'];
+		if (!empty($route_info['url_params'])) {
+			foreach ($route_info['url_params'] as $key) {
+				if (isset($data[$key])) {
+					$url = str_replace('$'.$key, $data[$key], $url);
+					unset($data[$key]);
+				}
+			}
+		}
+
+		$response = $this->curl_request($route_info['method'], $url, $data, $headers);
+		if (static::API_DEBUG)
+			var_dump($response);
 		return $response;
 	}
+
+	/* Payment info */
+
+	public function payment_id_info($id)
+	{
+		$sql = 'SELECT * FROM '.MAIN_DB_PREFIX.'younitedpay WHERE payment_id="'.$id.'"';
+		$q = $this->db->query($sql);
+		if (static::API_DEBUG)
+			var_dump($q, $this->db);
+		
+		if ($q) {
+			return $this->db->fetch_object($q);
+		}
+		$this->errors[] = 'Error: Payment not found';
+		return null;
+	}
+
+	/* CURL */
 
 	public function curl_request($type, $url, $data=[], $headers=[])
 	{
 		$ch = curl_init();
 
 		$headers = array_merge([], $headers);
-		var_dump($type, $url, $data, $headers);
+		if (static::CURL_DEBUG)
+			var_dump($type, $url, $data, $headers);
 
 		if ($type =='POST') {
 			curl_setopt($ch, CURLOPT_URL, $url);
@@ -284,7 +364,8 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		}
 		else {
 			curl_setopt($ch, CURLOPT_URL, $url.'?'.(is_array($data) ?http_build_query($data) :$data));
-			var_dump($url.'?'.http_build_query($data));
+			if (static::CURL_DEBUG)
+				var_dump($url.'?'.http_build_query($data));
 		}
 		
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -292,8 +373,11 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		
 		$server_output = curl_exec ($ch);
-		echo '<pre>'.htmlspecialchars($server_output).'</pre>';
+		if (static::CURL_DEBUG)
+			echo '<pre>'.htmlspecialchars($server_output).'</pre>';
 		$response = json_decode($server_output, true);
+		if (static::CURL_DEBUG)
+			var_dump($response);
 		curl_close ($ch);
 
 		return $response;
@@ -304,32 +388,151 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		return '/custom/mmiyounited/request.php?action=create&objecttype=' . $objecttype . '&objectid=' . $objectid . '&securekey=' . $securekey .'&amount=' . $amount;
 	}
 
-	public function payment_status()
+	/* email */
+
+	public function notification_email($object, $subject, $message)
+	{
+		global $conf, $mysoc;
+
+		$user = new User($this->db);
+		$user->fetch(1); // Admin @todo créer user spécifique pour trucs auto ?
+
+		$email_to = [];
+		$contacts = $object->liste_contact(-1, 'internal');
+		$contacts_ok = false;
+		foreach($contacts as $contact) {
+			$contacts_ok = true;
+			if (!empty($contact->email) && !in_array($contact->email, $email_to))
+				$email_to[] = $contact->email;
+		}
+		$client = $object->thirdparty;
+		$contacts = $client->getSalesRepresentatives($user);
+		foreach($contacts as $contact) {
+			$contacts_ok = true;
+			if (!empty($contact['email']) && !in_array($contact['email'], $email_to))
+				$email_to[] = $contact['email'];
+		}
+		
+		if (empty($email_to))
+			$email_to = (!empty($conf->global->MMI_YOUNITED_NOTIFICATION_EMAIL_TO) ?$conf->global->MMI_YOUNITED_NOTIFICATION_EMAIL_TO :$mysoc->email);
+		
+		$email_from = (!empty($conf->global->MMI_YOUNITED_NOTIFICATION_EMAIL_FROM) ?$conf->global->MMI_YOUNITED_NOTIFICATION_EMAIL_FROM :$mysoc->email);
+		
+		return mail(implode(',', $email_to),
+			$subject,
+			$message,
+			$email_headers = 'From: '.$email_from."\r\n"
+				.'Content-Type: text/plain; charset=UTF-8'."\r\n");
+	}
+
+	/* Payment */
+
+	public function payment_add($payment, $data)
+	{
+		$trans = $payment->paymentId;
+
+		$infos = [
+			'date' => $data['updatedAt'],
+			'amount' => $payment->amount,
+			'mode' => $this->payment_mode, // paymentId
+			'num' => $trans,
+			'note' => 'Younited Pay ID '.$trans.' pour '.$payment->objecttype.' #'.$payment->fk_object,
+			'accountid' => $this->account_id, // account
+			//'chqemetteur' => '',
+			//'chqbank' => '',
+			'module_oid'=>$payment->rowid,
+		];
+		
+		return mmi_payments::add($payment->objecttype, $payment->fk_object, $infos);
+	}
+
+	/* WEBHOOKS */
+
+	public function webhook_update($id, $input)
+	{
+		global $user;
+
+		$payment = $this->payment_id_info($id);
+		if (empty($payment)) {
+			$this->errors[] = 'Error: Webhook payment ID not found';
+			return;
+		}
+		$objecttype = $payment->objecttype;
+		$objectid = $payment->fk_object;
+		$object = mmi_payments::loadobject($objecttype, $objectid);
+		$object_url = mmi_payments::object_url($objecttype, $objectid);
+		$client = $object->thirdparty;
+
+		// LOG
+		$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'younitedpay_webhook_log
+			(`datec`, `payment_id`, `data`)
+			VALUES
+			(NOW(), "'.$id.'", "'.addslashes(json_encode($input)).'")';
+		$q = $this->db->query($sql);
+
+		$data = $input['data'];
+		$data = $input['data'];
+		$status = $data['status'];
+		//var_dump($status);
+		$updatedAt = str_replace('T', ' ', substr($data['updatedAt'], 0, 19));
+
+		if (true || $status != $payment->status) {
+			$sql = 'UPDATE '.MAIN_DB_PREFIX.'younitedpay SET payment_status="'.$status.'", payment_updatedat="'.$updatedAt.'" WHERE payment_id="'.$id.'"';
+			$q = $this->db->query($sql);
+			if (static::API_DEBUG)
+				var_dump($q, $this->db);
+
+			
+			if ($status == 'initiualized') {
+				// 
+			}
+			elseif ($status == 'Accepted') {
+				// email accepted ?
+				$r = $this->payment_add($payment, ['updatedAt'=>$data['updatedAt']]);
+				$email_info = 'Le paiement a été accepté par Younited Pay.'."\r\n"
+				.'Payment Id: '.$id."\r\n"
+				.'Réf: '.$object->ref."\r\n"
+				.'Mt: '.$payment->amount."\r\n"
+				."\r\n"
+				.'Client Réf: '.$client->code_client."\r\n"
+				.'Client: '.$client->name."\r\n"
+				."\r\n"
+				."Rendez-vous dans le Backoffice :\r\n- ".$object_url."\r\n";
+				
+				$this->notification_email($object,
+						'Younited Pay : Retour paiement '.$objecttype.' '.$object->ref,
+						$email_info
+						."\r\n".$email_info);
+			
+				// Modification statut
+				if($objecttype == 'Propal') {
+					//var_dump($user, $object::STATUS_SIGNED);
+					if (! in_array($object->status, [2, 4])) // $object::STATUS_SIGNED OR $object::STATUS_BILLED
+						$r = $object->closeProposal($user, $object::STATUS_SIGNED, 'Suite paiement Younited Pay');
+					//var_dump($r);
+				}
+				//var_dump($r);
+			}
+			elseif ($status == 'Executed') {
+				// email executed ??
+			}
+			elseif ($status == 'Cancelled') {
+				// email cancel
+			}
+		}
+	}
+
+	public function webhook_approve($payment)
 	{
 
 	}
 
-	public function payment_create()
+	public function webhook_accept($payment)
 	{
 
 	}
 
-	public function payment_approve()
-	{
-
-	}
-
-	public function payment_accept()
-	{
-
-	}
-
-	public function payment_execute()
-	{
-
-	}
-
-	public function payment_cancel()
+	public function webhook_cancel($payment)
 	{
 
 	}

@@ -29,6 +29,15 @@ require_once '../main_load.inc.php';
 // Parameters
 $arrayofparameters = array(
 	'MMI_YOUNITED_API_MODE_SANDBOX'=>array('type'=>'yesno','enabled'=>1),
+	'MMI_YOUNITED_DEBUG'=>array('type'=>'yesno','enabled'=>1),
+
+	'MMI_YOUNITED_BANQ'=>array('type'=>'separator', 'enabled'=>1),
+	'MMI_YOUNITED_PAYMENT_MODE'=>array('type'=>'int','enabled'=>1),
+	'MMI_YOUNITED_ACCOUNT_ID'=>array('type'=>'int','enabled'=>1),
+	
+	'MMI_YOUNITED_NOTIFICATION'=>array('type'=>'separator', 'enabled'=>1),
+	'MMI_YOUNITED_NOTIFICATION_EMAIL_FROM'=>array('type'=>'string','enabled'=>1),
+	'MMI_YOUNITED_NOTIFICATION_EMAIL_TO'=>array('type'=>'string','enabled'=>1),
 	
 	'MMI_YOUNITED_API_PRODUCTION'=>array('type'=>'separator', 'enabled'=>1),
 	'MMI_YOUNITED_API_PRODUCTION_TOKEN_URL'=>array('type'=>'string','enabled'=>1),

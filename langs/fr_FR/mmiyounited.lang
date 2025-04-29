@@ -29,6 +29,10 @@ MMIYounitedSetup = MMIYounited setup
 Settings = Settings
 MMIYounitedSetupPage = MMIYounited setup page
 
+MMI_YOUNITED_DEBUG = Mode Debug (développeur)
+MMI_YOUNITED_BANQ = Paramètres bancaires
+MMI_YOUNITED_PAYMENT_MODE = Mode de paiement
+MMI_YOUNITED_ACCOUNT_ID = Compte
 MMI_YOUNITED_API_MODE_SANDBOX = Mode Sandbox (test)
 MMI_YOUNITED_API_PRODUCTION = Environnement Production
 MMI_YOUNITED_API_PRODUCTION_TOKEN_URL = URL de récupération de token de production
@@ -42,7 +46,9 @@ MMI_YOUNITED_API_SANDBOX_URL = URL sandbox
 MMI_YOUNITED_API_SANDBOX_USERNAME = Nom d'utilisateur sandbox
 MMI_YOUNITED_API_SANDBOX_PASSWORD = Mot de passe sandbox
 MMI_YOUNITED_API_SANDBOX_TOKEN = Token sandbox (utile ?)
-
+MMI_YOUNITED_NOTIFICATION = Notifications par Email
+MMI_YOUNITED_NOTIFICATION_EMAIL_FROM = Adresse email d'expéditeur
+MMI_YOUNITED_NOTIFICATION_EMAIL_TO = Adresse email de destination
 
 #
 # About page
