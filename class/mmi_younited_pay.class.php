@@ -600,6 +600,8 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			$tel = '';
 		}
 		$tel = preg_replace('/[^0-9]/', '', $tel);
+		if (empty($tel))
+			return '';
 		return '+'.$tel;
 	}
 }
