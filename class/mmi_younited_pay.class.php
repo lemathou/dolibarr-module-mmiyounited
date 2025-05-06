@@ -198,6 +198,10 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		if ($maturity===NULL)
 			$maturity = 24;
 
+		$address = !empty($customer) ?$customer->address :$societe->address;
+		$addressline1 = strlen($address) > 38 ?substr($address, 0, 38) :$address;
+		$addressline2 = strlen($address) > 38 ?substr($address, 38) :'';
+
 		$params = [
 			"loanRequest" => [
 				"requestedAmount" => $amount,
@@ -227,8 +231,8 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 				"mobilePhoneNumber" => $this->tel_intl(!empty($customer) ?$customer->phone_mobile :$societe->phone),
 				//"birthDate" => "1990-02-20T00:00:00",
 				"postalAddress" => [
-					"AddressLine1" => !empty($customer) ?$customer->address :$societe->address,
-					//"AddressLine2" => '',
+					"AddressLine1" => $addressline1,
+					"AddressLine2" => $addressline2,
 					'city' => !empty($customer) ?$customer->town :$societe->town,
 					'postalCode' => !empty($customer) ?$customer->zip :$societe->zip,
 					'countryCode' => !empty($customer) ?$customer->country_code :$societe->country_code,
@@ -588,6 +592,9 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		}
 		elseif(substr($tel, 0, 1) == '0') {
 			$tel = '+33'.substr($tel, 1);
+		}
+		elseif(is_numeric(substr($tel, 0, 1))) {
+			$tel = '+'.$tel;
 		}
 		elseif(substr($tel, 0, 1) != '+') {
 			$tel = '';
