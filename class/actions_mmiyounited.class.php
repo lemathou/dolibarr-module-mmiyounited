@@ -78,15 +78,21 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 			//var_dump(get_class($object), $object->id, $amount, 1, true);
 			// @todo securekey pas top
 			$securekey = GETPOST('securekey', 'alpha');
-			$link = $this->payment_service->payment_link($objecttype, $object->id, $securekey, $amount);
+			$link = $this->payment_service->payment_link($objecttype, $object->id, $securekey, round($amount, 2));
 			//var_dump($link); die();
 
-			print '<div class="button buttonpayment" id="div_dopayment_mmiyounited">
+			$this->payment_service->api_shops();
+			$ret = $this->payment_service->api_personal_loans_offers($objecttype, $object->id);
+			
+			print '<div class="button buttonpayment" id="div_dopayment_mmiyounited" style="pointer: cursor;">
 			<input class="" type="submit" id="dopayment_mmiyounited" name="dopayment_mmiyounited" value="'.$langs->trans("MMIYounitedDoPayment").'">';
 			print '<br />';
 			print '<span class="buttonpaymentsmall">
 			<img src="/custom/mmiyounited/img/younited-logo.png" alt="CB Visa Mastercard" class="img_cb" style="width: 50%;height: auto;" />
 			</span>';
+			foreach($ret as $offer) {
+				echo '<p style="margin:0;" data-maturity="'.$offer['characteristics']['maturityInMonths'].'">'.$offer['characteristics']['maturityInMonths'].' mois : '.$offer['details']['monthlyInstallmentAmount'].'/mois</p>';
+			}
 			print '</div>';
 		}
 
@@ -96,8 +102,10 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 
 		print '<script>
 			$( document ).ready(function() {
-				$("#div_dopayment_mmiyounited").click(function(e){
-					document.location.href=\''.$link.'\';
+				$("#div_dopayment_mmiyounited p").click(function(e){
+					let maturity = $(this).data("maturity");
+					let link = \''.$link.'&maturity=\'+maturity;
+					document.location.href=link;
 					$(this).css( \'cursor\', \'wait\' );
 					e.stopPropagation();
 					return false;

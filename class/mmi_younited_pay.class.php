@@ -1,5 +1,13 @@
 <?php
 
+// Soc
+require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+require_once DOL_DOCUMENT_ROOT.'/contact/class/contact.class.php';
+// Documents
+require_once DOL_DOCUMENT_ROOT.'/compta/facture/class/facture.class.php';
+require_once DOL_DOCUMENT_ROOT.'/commande/class/commande.class.php';
+require_once DOL_DOCUMENT_ROOT.'/comm/propal/class/propal.class.php';
+
 dol_include_once('mmicommon/class/mmi_singleton.class.php');
 dol_include_once('mmipayments/class/mmi_payments.class.php');
 
@@ -82,11 +90,11 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	protected $api_url;
 
 	protected $ShopCode;
-	protected $MaturityDefaultList = '6,12,24,48';
+	protected $MaturityDefaultList = '6,12,24,36,48,60,72,84,96';
 
 	protected $ShopEmail;
 	protected $ShopReference;
-	protected $MerchantReference = 'DERCYA';
+	protected $MerchantReference;
 
 	protected $api_version = '2025-01-01';
 
@@ -97,7 +105,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 		$this->website_url = 'https://'.$_SERVER['SERVER_NAME'];
 		$this->webhook_url = $this->website_url.'/custom/mmiyounited/webhook.php';
-		$this->webhook_url = 'https://erp.dercya.com/custom/mmiyounited/webhook.php';
 		$this->sandbox_mode = !empty($conf->global->MMI_YOUNITED_API_MODE_SANDBOX);
 		$this->login_url = $this->sandbox_mode ?$conf->global->MMI_YOUNITED_API_SANDBOX_TOKEN_URL :$conf->global->MMI_YOUNITED_API_PRODUCTION_TOKEN_URL;
 		$this->username = $this->sandbox_mode ?$conf->global->MMI_YOUNITED_API_SANDBOX_USERNAME :$conf->global->MMI_YOUNITED_API_PRODUCTION_USERNAME;
@@ -116,8 +123,8 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	public function api_token()
 	{
 		// @todo check if token is expired
-		if (!empty($_SESSION['younited_token']) && !empty($_SESSION['younited_token_expires']) && $_SESSION['younited_token_expires'] > time()) {
-			return $_SESSION['younited_token'];
+		if (!empty($_SESSION['younited_token'.($this->sandbox_mode ?'_sandbox' :'')]) && !empty($_SESSION['younited_token_expires'.($this->sandbox_mode ?'_sandbox' :'')]) && $_SESSION['younited_token_expires'.($this->sandbox_mode ?'_sandbox' :'')] > time()) {
+			return $_SESSION['younited_token'.($this->sandbox_mode ?'_sandbox' :'')];
 		}
 
 		return $this->api_login();
@@ -147,8 +154,8 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			return;
 		}
 
-		$_SESSION['younited_token'] = $response['access_token'];
-		$_SESSION['younited_token_expires'] = time() + $response['expires_in'];
+		$_SESSION['younited_token'.($this->sandbox_mode ?'_sandbox' :'')] = $response['access_token'];
+		$_SESSION['younited_token_expires'.($this->sandbox_mode ?'_sandbox' :'')] = time() + $response['expires_in'];
 
 		return $response['access_token'];
 		// @todo save in database ?
@@ -161,22 +168,35 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	
 	/* API PAYMENT */
 
-	public function api_personal_loans_offers($amount, $params=[])
+	public function api_personal_loans_offers($objecttype, $objectid, $params=[])
 	{
+		$object = mmi_payments::loadobject($objecttype, $objectid);
+		$amount = round($object->total_ttc, 2);
+
 		return $this->api_request('personal-loans-offers', ['Amount'=>$amount, 'ShopCode'=>$this->ShopCode, 'Maturity.list'=>$this->MaturityDefaultList]);
 	}
 
-	public function api_personal_loan_create($objecttype, $objectid, $amount, $maturity)
+	public function api_personal_loan_create($objecttype, $objectid, $amount=NULL, $maturity=NULL)
 	{
-		global $conf;
-
 		$object = mmi_payments::loadobject($objecttype, $objectid);
 		//var_dump($object);
 		$societe = $object->thirdparty;
 		//$contact = $object->thirdparty->;
-
-		$amount = round($object->total_ttc, 2);
-		$maturity = 24;
+		$contacts = $object->liste_contact(-1, 'external');
+		$contacts_ok = false;
+		$customer = new Contact($this->db);
+		foreach($contacts as $contact) {
+			$contacts_ok = true;
+			$customer->fetch($contact['id']);
+			//var_dump($contact, $customer); die();
+			break;
+		}
+		// Default params
+		if ($amount===NULL)
+			$amount = $object->total_ttc;
+		$amount = round($amount, 2);
+		if ($maturity===NULL)
+			$maturity = 24;
 
 		$params = [
 			"loanRequest" => [
@@ -200,6 +220,28 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 				"webhookNotificationUrl" => $this->webhook_url,
 				"apiVersion" => "2024-01-01", // $this->api_version,
 			],
+			"customerInformation" => [
+				"firstName" => !empty($customer) ?$customer->firstname :$societe->nom,
+				"lastName" => !empty($customer) ?$customer->lastname :$societe->nom,
+				"emailAddress" => !empty($customer) ?$customer->email :$societe->email,
+				"mobilePhoneNumber" => $this->tel_intl(!empty($customer) ?$customer->phone_mobile :$societe->phone),
+				//"birthDate" => "1990-02-20T00:00:00",
+				"postalAddress" => [
+					"AddressLine1" => !empty($customer) ?$customer->address :$societe->address,
+					//"AddressLine2" => '',
+					'city' => !empty($customer) ?$customer->town :$societe->town,
+					'postalCode' => !empty($customer) ?$customer->zip :$societe->zip,
+					'countryCode' => !empty($customer) ?$customer->country_code :$societe->country_code,
+				],
+			],
+			"riskInsights" => [
+				//"customerSegmentationCode" => 'standard', // or premium
+				"customerIpAddress" => $_SERVER['REMOTE_ADDR'],
+			],
+			"customExperience" => [
+				"allowMaturityChoice" => true,
+				"customerRedirectUrl" => $this->website_url."/custom/mmiyounited/return.php",
+			]
 		];
 		if (static::API_DEBUG)
 			var_dump($params);
@@ -482,13 +524,15 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			if (static::API_DEBUG)
 				var_dump($q, $this->db);
 
-			
+			// Selon statut
 			if ($status == 'initiualized') {
 				// 
 			}
 			elseif ($status == 'Accepted') {
 				// email accepted ?
+				// @todo attention paiement en doublon !!
 				$r = $this->payment_add($payment, ['updatedAt'=>$data['updatedAt']]);
+				// Email message
 				$email_info = 'Le paiement a été accepté par Younited Pay.'."\r\n"
 				.'Payment Id: '.$id."\r\n"
 				.'Réf: '.$object->ref."\r\n"
@@ -498,11 +542,10 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 				.'Client: '.$client->name."\r\n"
 				."\r\n"
 				."Rendez-vous dans le Backoffice :\r\n- ".$object_url."\r\n";
-				
+				// Send email
 				$this->notification_email($object,
-						'Younited Pay : Retour paiement '.$objecttype.' '.$object->ref,
-						$email_info
-						."\r\n".$email_info);
+						$objecttype.' '.$object->ref.' : Paiement Younited Pay',
+						$email_info);
 			
 				// Modification statut
 				if($objecttype == 'Propal') {
@@ -535,6 +578,22 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	public function webhook_cancel($payment)
 	{
 
+	}
+
+	public function tel_intl($tel)
+	{
+		$tel = trim($tel);
+		if (substr($tel, 0, 2) == '00') {
+			$tel = '+'.substr($tel, 2);
+		}
+		elseif(substr($tel, 0, 1) == '0') {
+			$tel = '+33'.substr($tel, 1);
+		}
+		elseif(substr($tel, 0, 1) != '+') {
+			$tel = '';
+		}
+		$tel = preg_replace('/[^0-9]/', '', $tel);
+		return '+'.$tel;
 	}
 }
 

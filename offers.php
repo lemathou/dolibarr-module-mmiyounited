@@ -12,7 +12,6 @@ $objecttype = GETPOST('objecttype', 'alpha');
 $objectid = GETPOST('objectid', 'int');
 $securekey = GETPOST('securekey', 'alpha');
 $amount = GETPOST('amount', 'alpha');
-$maturity = GETPOST('maturity', 'int');
 
 $younited_service = mmi_younited_pay::_instance();
 
@@ -35,20 +34,6 @@ $token = $younited_service->api_token();
 // Paramètres
 
 $younited_service->api_shops();
-$payment = $younited_service->api_personal_loan_create($objecttype, $objectid, $amount, $maturity ?:12);
-if ($mmi_younited_debug)
-	var_dump($payment);
-$payment_info = $younited_service->api_payment_info($payment['paymentId']);
-if ($mmi_younited_debug)
-	var_dump($payment_info);
-$payment_status = $younited_service->api_payment_status($payment['paymentId']);
-if ($mmi_younited_debug)
-	var_dump($payment_status);
-
-if (!empty($payment['paymentLink'])) {
-	header('Location: '.$payment['paymentLink']);
-	echo '<script>window.location.href="'.$payment['paymentLink'].'";</script>';
-	echo '<a href="'.$payment['paymentLink'].'">Accéder au paiement</a>';
-} else {
-	echo 'Pas de lien de paiement';
-}
+$ret = $younited_service->api_personal_loans_offers($objecttype, $objectid);
+var_dump($ret);
+//var_dump($object);
