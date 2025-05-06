@@ -150,7 +150,7 @@ class modMMIYounited extends DolibarrModules
 		$this->langfiles = array("mmiyounited@mmiyounited");
 
 		// Prerequisites
-		$this->phpmin = array(7, 0); // Minimum version of PHP required by module
+		$this->phpmin = array(7, 4); // Minimum version of PHP required by module
 		$this->need_dolibarr_version = array(11, -3); // Minimum version of Dolibarr required by module
 		$this->need_javascript_ajax = 0;
 
@@ -304,8 +304,6 @@ class modMMIYounited extends DolibarrModules
 		$r = 0;
 		// Add here entries to declare new menus
 		/* BEGIN MODULEBUILDER TOPMENU */
-		$this->menu[$r++] = array(
-		);
 		/* END MODULEBUILDER TOPMENU */
 		/* BEGIN MODULEBUILDER LEFTMENU MYOBJECT */
 		/*

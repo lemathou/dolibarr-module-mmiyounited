@@ -100,8 +100,15 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 	protected function __construct($db)
 	{
-		global $conf;
+		global $conf, $user;
 		parent::__construct($db);
+
+		// Load default user
+		if (!$user || !$user->id) {
+			$user = new User($this->db);
+                	$user->fetch(1); // Admin @todo créer user spécifique pour trucs auto ?
+		}
+
 
 		$this->website_url = 'https://'.$_SERVER['SERVER_NAME'];
 		$this->webhook_url = $this->website_url.'/custom/mmiyounited/webhook.php';
@@ -259,8 +266,8 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		}
 
 		$_SESSION['younited_payment_id'] = $response['paymentId'];
-		$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'younitedpay (objecttype, fk_object, amount, maturity, payment_id)
-			VALUES ("'.strtolower($objecttype).'", '.$objectid.', '.$amount.', '.$maturity.', "'.$response['paymentId'].'")';
+		$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'younitedpay (objecttype, fk_object, amount, maturity, payment_id, payment_status)
+			VALUES ("'.strtolower($objecttype).'", '.$objectid.', '.$amount.', '.$maturity.', "'.$response['paymentId'].'", "created")';
 		$q = $this->db->query($sql);
 		if (static::API_DEBUG)
 			var_dump($q, $this->db);
@@ -438,10 +445,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 	public function notification_email($object, $subject, $message)
 	{
-		global $conf, $mysoc;
-
-		$user = new User($this->db);
-		$user->fetch(1); // Admin @todo créer user spécifique pour trucs auto ?
+		global $conf, $mysoc, $user;
 
 		$email_to = [];
 		$contacts = $object->liste_contact(-1, 'internal');

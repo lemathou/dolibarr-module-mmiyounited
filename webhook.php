@@ -9,44 +9,59 @@ if (isset($_GET['input'])) {
 	$_SERVER['QUERY_STRING'] = '';
 }
 
+// We accept to go on this page from external web site.
+define('NOLOGIN', 1);
+define('NOSESSION', 1);
+define("NOCSRFCHECK", 1);
+define("NOIPCHECK", 1);
+
+define('MMI_YOUNITED_WEBHOOK_LOG', true);
+define('MMI_YOUNITED_WEBHOOK_LOG_FILENAME', 'logs/webhook.log');
+
 require_once 'env.inc.php';
 require_once 'main_load.inc.php';
 
 dol_include_once('mmiyounited/class/mmi_younited_pay.class.php');
 
-define('MMI_YOUNITED_WEBHOOK_LOG', true);
-define('MMI_YOUNITED_WEBHOOK_LOG_FILENAME', 'logs/webhook.log');
-
+if (MMI_YOUNITED_WEBHOOK_LOG) {
+        $msg = '----------'."\n".date('Y-m-d H:i:s')."\n";
+        $msg .= 'POST: '.var_export($_POST, true)."\n";
+        $msg .= 'GET: '.var_export($_GET, true)."\n";
+        $msg .= 'REQUEST: '.var_export($_REQUEST, true)."\n";
+        $msg .= 'SERVER: '.var_export($_SERVER, true)."\n";
+        $fp = fopen(MMI_YOUNITED_WEBHOOK_LOG_FILENAME, 'a');
+        fwrite($fp, $msg);
+}
 if (empty($input)) {
-	$inputJSON = file_get_contents('php://input');
-	$input = json_decode($inputJSON, TRUE); //convert JSON into array
+        $inputJSON = file_get_contents('php://input');
+        $input = json_decode($inputJSON, TRUE); //convert JSON into array
 }
 
 if (MMI_YOUNITED_WEBHOOK_LOG) {
-	$msg = '----------'."\n".date('Y-m-d H:i:s')."\n";
-	$msg .= 'POST: '.var_export($_POST, true)."\n";
-	$msg .= 'GET: '.var_export($_GET, true)."\n";
-	$msg .= 'JSONINPUT: '.var_export($input, true)."\n";
-	$msg .= 'REQUEST: '.var_export($_REQUEST, true)."\n";
-	$msg .= 'SERVER: '.var_export($_SERVER, true)."\n";
+        $msg = 'JSONINPUT: '.var_export($input, true)."\n";
 
-	$fp = fopen(MMI_YOUNITED_WEBHOOK_LOG_FILENAME, 'a');
-	fwrite($fp, $msg);
-	fclose($fp);
+        fwrite($fp, $msg);
 }
 
 if (empty($input) || !is_array($input)) {
-	echo 'No input';
-	die();
+	fclose($fp);
+        die();
 }
 
 // Payment update
 if (!empty($input['type']) && $input['type']==='payment.updated'
 	&& !empty($input['data']) && !empty($input['data']['paymentId'])) {
 
+	$msg = 'Payment updated: '.var_export($input['data']['paymentId'], true)."\n";
+	fwrite($fp, $msg);
+
 	$younited_service = mmi_younited_pay::_instance();
 	$result = $younited_service->webhook_update($input['data']['paymentId'], $input);
+	$msg = 'younited_service webhook_update result : '.var_export($result, true)."\n";
+	fwrite($fp, $msg);
 }
+
+fclose($fp);
 
 /* // Webhook Data format
 {
