@@ -521,7 +521,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$q = $this->db->query($sql);
 
 		$data = $input['data'];
-		$data = $input['data'];
 		$status = $data['status'];
 		//var_dump($status);
 		$updatedAt = str_replace('T', ' ', substr($data['updatedAt'], 0, 19));
@@ -531,29 +530,30 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			$q = $this->db->query($sql);
 			if (static::API_DEBUG)
 				var_dump($q, $this->db);
+		
+			// email accepted ?
+			// @todo attention paiement en doublon !!
+			// Email message
+			$email_info = 'Notificatiuon de statut de paiement Younited Pay : '.$status."\r\n"
+			.'Payment Id: '.$id."\r\n"
+			.'Réf: '.$object->ref."\r\n"
+			.'Mt: '.$payment->amount."\r\n"
+			."\r\n"
+			.'Client Réf: '.$client->code_client."\r\n"
+			.'Client: '.$client->name."\r\n"
+			."\r\n"
+			."Rendez-vous dans le Backoffice :\r\n- ".$object_url."\r\n";
+			// Send email
+			$this->notification_email($object,
+					$objecttype.' '.$object->ref.' : Notification Younited Pay : '.$status,
+					$email_info);
 
 			// Selon statut
 			if ($status == 'initiualized') {
 				// 
 			}
 			elseif ($status == 'Accepted') {
-				// email accepted ?
-				// @todo attention paiement en doublon !!
 				$r = $this->payment_add($payment, ['updatedAt'=>$data['updatedAt']]);
-				// Email message
-				$email_info = 'Le paiement a été accepté par Younited Pay.'."\r\n"
-				.'Payment Id: '.$id."\r\n"
-				.'Réf: '.$object->ref."\r\n"
-				.'Mt: '.$payment->amount."\r\n"
-				."\r\n"
-				.'Client Réf: '.$client->code_client."\r\n"
-				.'Client: '.$client->name."\r\n"
-				."\r\n"
-				."Rendez-vous dans le Backoffice :\r\n- ".$object_url."\r\n";
-				// Send email
-				$this->notification_email($object,
-						$objecttype.' '.$object->ref.' : Paiement Younited Pay',
-						$email_info);
 			
 				// Modification statut
 				if($objecttype == 'Propal') {
@@ -569,6 +569,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			}
 			elseif ($status == 'Cancelled') {
 				// email cancel
+				// @todo cancel payment ? Make refund ?
 			}
 		}
 	}
