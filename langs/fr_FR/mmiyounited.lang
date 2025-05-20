@@ -29,6 +29,7 @@ MMIYounitedSetup = MMIYounited setup
 Settings = Settings
 MMIYounitedSetupPage = MMIYounited setup page
 
+MMI_YOUNITED_ENABLE = Activer le module de paiement
 MMI_YOUNITED_DEBUG = Mode Debug (développeur)
 MMI_YOUNITED_BANQ = Paramètres bancaires
 MMI_YOUNITED_PAYMENT_MODE = Mode de paiement

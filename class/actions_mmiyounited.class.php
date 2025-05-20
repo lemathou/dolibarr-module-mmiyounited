@@ -73,7 +73,7 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 		//var_dump($object->fin_validite, $time, empty($object->fin_validite) || $object->fin_validite < $time);
 
 		// Paiement normal complet
-		if (true) {
+		if (getDolGlobalInt('MMI_YOUNITED_ENABLE')) {
 			$amount = (!empty($parameters['amount']) ?$parameters['amount'] :$reste);
 			//var_dump(get_class($object), $object->id, $amount, 1, true);
 			// @todo securekey pas top

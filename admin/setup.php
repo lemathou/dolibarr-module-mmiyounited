@@ -28,6 +28,7 @@ require_once '../main_load.inc.php';
 
 // Parameters
 $arrayofparameters = array(
+	'MMI_YOUNITED_ENABLE'=>array('type'=>'yesno','enabled'=>1),
 	'MMI_YOUNITED_API_MODE_SANDBOX'=>array('type'=>'yesno','enabled'=>1),
 	'MMI_YOUNITED_DEBUG'=>array('type'=>'yesno','enabled'=>1),
 
