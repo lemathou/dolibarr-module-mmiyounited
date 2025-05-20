@@ -550,9 +550,13 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 			// Selon statut
 			if ($status == 'initiualized') {
-				// 
+				// Initialized by us
 			}
 			elseif ($status == 'Accepted') {
+				// Accepted by custiomer
+			}
+			elseif ($status == 'Executed') {
+				// Payment OK
 				$r = $this->payment_add($payment, ['updatedAt'=>$data['updatedAt']]);
 			
 				// Modification statut
@@ -563,9 +567,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 					//var_dump($r);
 				}
 				//var_dump($r);
-			}
-			elseif ($status == 'Executed') {
-				// email executed ??
 			}
 			elseif ($status == 'Cancelled') {
 				// email cancel

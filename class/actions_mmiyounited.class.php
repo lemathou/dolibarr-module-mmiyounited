@@ -84,15 +84,42 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 			$this->payment_service->api_shops();
 			$ret = $this->payment_service->api_personal_loans_offers($objecttype, $object->id);
 			
-			print '<div class="button buttonpayment" id="div_dopayment_mmiyounited" style="pointer: cursor;">
+			print '<div class="button buttonpayment" id="div_dopayment_mmiyounited">
 			<input class="" type="submit" id="dopayment_mmiyounited" name="dopayment_mmiyounited" value="'.$langs->trans("MMIYounitedDoPayment").'">';
-			print '<br />';
+			print '<p style="margin-bottom: 0;">Achetez maintenant et payez à votre rythme</p>';
 			print '<span class="buttonpaymentsmall">
-			<img src="/custom/mmiyounited/img/younited-logo.png" alt="CB Visa Mastercard" class="img_cb" style="width: 50%;height: auto;" />
+			<img src="/custom/mmiyounited/img/younited-logo.png" alt="Younited Pay" class="img_cb" style="width: 50%;height: auto;" />
 			</span>';
+			$offers_show = [];
 			foreach($ret as $offer) {
-				echo '<p style="margin:0;" data-maturity="'.$offer['characteristics']['maturityInMonths'].'">'.$offer['characteristics']['maturityInMonths'].' mois : '.$offer['details']['monthlyInstallmentAmount'].'/mois</p>';
+				$offers_show[$offer['characteristics']['maturityInMonths']] = $offer;
 			}
+			asort($offers_show);
+			//var_dump($offers_show);
+			echo '<p class="offer" style="margin:0;" data-maturity="6">De '.$offers_show[6]['characteristics']['maturityInMonths'].' mois pour <b>'.$offers_show[6]['details']['monthlyInstallmentAmount'].'/mois</b></p>';
+			echo '<p class="offer" style="margin:0;" data-maturity="84">à '.$offers_show[84]['characteristics']['maturityInMonths'].' mois pour <b>'.$offers_show[84]['details']['monthlyInstallmentAmount'].'/mois</b></p>';
+			echo '<div style="margin: 5px 20px;border: 1px purple solid;padding: 5px;background-color: #FAECFF;">';
+			echo '<p>Choisissez la durée de remboursement :</p>';
+			echo '<p><select class="offers" name="maturity"><option value="">Durée :</option>';
+			foreach($offers_show as $offer) {
+				$amount = $offer['details']['monthlyInstallmentAmount'];
+				$maturity = $offer['characteristics']['maturityInMonths'];
+				echo '<option value="'.$maturity.'">'.$maturity.' mois pour '.$amount.'&euro;/mois</option>';
+			}
+			echo '</select></p>';
+			echo '<div class="younitedpay_details">';
+			echo '<p>Montant à financer : <span class="enhance" id="younited_pay_mtcred"></span><br />';
+			echo 'Durée : <span class="enhance" id="younited_pay_duree"></span><br />';
+			echo 'Total mois : <span class="enhance" id="younited_pay_mtmois"></span></p>';
+			echo '<p>Montant du crédit : <span id="younited_pay_mt"></span><br />';
+			echo '+ intérêt du crédit : <span id="younited_pay_int"></span><br />';
+			echo '= montant total dû : <span id="younited_pay_du"></span></p>';
+			echo '<p>TAEG fixe : <span id="younited_pay_taeg"></span><br />';
+			echo 'Taux débiteur fixe : <span id="younited_pay_tx"></span></p>';
+			echo '</div>';
+			echo '<div id="div_dopayment_mmiyounited_real" class="button buttonpayment disabled"><p>Connectez simplement et de manière sécurisée votre compte bancaire</p></div>';
+			echo '</div>';
+			echo '<p style="font-size: 0.8em;">Un crédit vous engage et doit être remboursé. Vérifiez vos capacités de remboursement avant de vous engager.</p>';
 			print '</div>';
 		}
 
@@ -100,15 +127,65 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 		// var_dump($object->array_options['options_acompte']);
 		// var_dump($object->total_ttc);
 
-		print '<script>
-			$( document ).ready(function() {
-				$("#div_dopayment_mmiyounited p").click(function(e){
+		print '<style type="text/css">
+		#div_dopayment_mmiyounited.buttonpayment {
+			cursor: auto;
+		}
+		#div_dopayment_mmiyounited p.offer, #div_dopayment_mmiyounited 	option.offer {
+			cursor: pointer;
+		}
+		.younitedpay_details {
+			display: none;
+			padding: 0 5px;
+		}
+		.younitedpay_details p {
+			text-align: left;
+			margin: 10px 0 0 0;
+		}
+		.younitedpay_details span {
+			float: right;
+		}
+		.younitedpay_details span.enhance {
+			font-weight: bold;
+		}
+		</style>';
+		echo '<script>';
+		echo 'let offers={};';
+		foreach($offers_show as $offer) {
+			$maturity = $offer['characteristics']['maturityInMonths'];
+			echo 'offers["'.$maturity.'"] = '.json_encode($offer).';';
+		}
+		echo '$( document ).ready(function() {
+				var younitedpay_link = \''.$link.'\';
+				$("#div_dopayment_mmiyounited p.offer").click(function(e){
 					let maturity = $(this).data("maturity");
-					let link = \''.$link.'&maturity=\'+maturity;
+					let link = younitedpay_link+\'&maturity=\'+maturity;
 					document.location.href=link;
 					$(this).css( \'cursor\', \'wait\' );
 					e.stopPropagation();
 					return false;
+				});
+				$("#div_dopayment_mmiyounited select.offers").change(function(e){
+					let maturity = $("option:selected", this).val();
+					let link = younitedpay_link+\'&maturity=\'+maturity;
+					let infos = offers[maturity];
+					//alert(infos);
+					$(".younitedpay_details #younited_pay_mtcred").text(infos.requestedAmount+" €");
+					$(".younitedpay_details #younited_pay_duree").text(infos.characteristics.maturityInMonths+" mois");
+					$(".younitedpay_details #younited_pay_mtmois").text(infos.details.monthlyInstallmentAmount+" €/mois");
+					$(".younitedpay_details #younited_pay_mt").text(infos.characteristics.amount+" €");
+					$(".younitedpay_details #younited_pay_int").text(infos.details.interestsAmount+" €");
+					$(".younitedpay_details #younited_pay_du").text(infos.details.totalDueAmount+" €");
+					$(".younitedpay_details #younited_pay_taeg").text(Math.round(infos.details.annualPercentageRate*10000)/100+" %");
+					$(".younitedpay_details #younited_pay_tx").text(Math.round(infos.characteristics.interestRate*10000)/100+" %");
+					$(".younitedpay_details").show();
+					$("#div_dopayment_mmiyounited_real").removeClass("disabled");
+					$("#div_dopayment_mmiyounited_real").click(function(e){
+						$(this).css( \'cursor\', \'wait\' );
+						document.location.href=link;
+						e.stopPropagation();
+						return false;
+					});
 				});
 			});
 			</script>';
