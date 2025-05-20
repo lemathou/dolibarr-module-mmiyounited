@@ -1,6 +1,8 @@
 <?php
 
-var_dump($_GET, $_POST, $_REQUEST, $_SERVER);
+//var_dump($_GET, $_POST, $_REQUEST, $_SERVER);
+
+die();
 
 ?>
 <h1>Merci pour votre paiement</h1>
