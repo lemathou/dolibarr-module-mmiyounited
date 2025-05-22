@@ -90,7 +90,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	protected $api_url;
 
 	protected $ShopCode;
-	protected $MaturityDefaultList = '6,12,24,36,48,60,72,84,96';
+	protected $MaturityDefaultList = '12,24,36,48,60,72,84,96';
 
 	protected $ShopEmail;
 	protected $ShopReference;
@@ -106,9 +106,9 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		// Load default user
 		if (!$user || !$user->id) {
 			$user = new User($this->db);
-                	$user->fetch(1); // Admin @todo créer user spécifique pour trucs auto ?
+			$user->fetch(getDolGlobalInt('MMI_YOUNITED_USER_ID')); // Admin @todo créer user spécifique pour trucs auto ?
+			//var_dump($user);
 		}
-
 
 		$this->website_url = 'https://'.$_SERVER['SERVER_NAME'];
 		$this->webhook_url = $this->website_url.'/custom/mmiyounited/webhook.php';
@@ -123,6 +123,77 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$this->MerchantReference = $this->sandbox_mode ?$conf->global->MMI_YOUNITED_API_SANDBOX_MERCHANT_REF :$conf->global->MMI_YOUNITED_API_PRODUCTION_MERCHANT_REF;
 		$this->payment_mode = $conf->global->MMI_YOUNITED_PAYMENT_MODE;
 		$this->account_id = $conf->global->MMI_YOUNITED_ACCOUNT_ID;
+	}
+
+	/* DATA & TEST */
+
+	public function personal_data($object)
+	{
+		$data = [];
+
+		$societe = $object->thirdparty;
+		//$contact = $object->thirdparty->;
+		$contacts = $object->liste_contact(-1, 'external');
+		$customer = NULL;
+		foreach($contacts as $contact) {
+			$customer = new Contact($this->db);
+			$customer->fetch($contact['id']);
+			//var_dump($contact, $customer); die();
+			break;
+		}
+
+		$address = $customer ?$customer->address :$societe->address;
+		$data['addressline1'] = strlen($address) > 38 ?substr($address, 0, 38) :$address;
+		$data['addressline2'] = strlen($address) > 38 ?substr($address, 38) :'';
+
+		$data['town'] = $customer ?$customer->town :$societe->town;
+		$data['zip'] = $customer ?$customer->zip :$societe->zip;
+		$data['country_code'] = $customer ?$customer->country_code :$societe->country_code;
+
+		$data['email'] = $customer ?$customer->email :$societe->email;
+
+		if ($customer) {
+			$data['phone'] = $customer->phone_mobile ?$customer->phone_mobile :($customer->phone_pro ?$customer->phone_pro :$customer->phone_perso);
+			$data['firstname'] = $customer->firstname;
+			$data['lastname'] = $customer->lastname;
+		}
+		else {
+			$data['phone'] = $societe->phone;
+			if (!empty($societe->array_options['options_firstname'])) {
+				$data['firstname'] = $societe->array_options['options_firstname'];
+				$data['lastname'] = $societe->array_options['options_lastname'];
+			}
+			else {
+				$nom_e = explode(' ', $societe->nom);
+				$data['lastname'] = $nom_e[0];
+				if (count($nom_e) > 1)
+					$data['firstname'] = implode(' ', array_slice($nom_e, 1));
+				else
+					$data['firstname'] = '-';
+			}
+		}
+
+		return $data;
+	}
+
+	public function payment_enable($object, $amount=NULL)
+	{
+		$data = $this->personal_data($object);
+
+		if (empty($data['firstname']) || empty($data['lastname']) || empty($data['email']) || empty($data['phone']) || empty($data['addressline1']) || empty($data['town']) || empty($data['zip'])) {
+			return false;
+		}
+
+		$amount_min = getDolGlobalInt('MMI_YOUNITED_AMOUNT_MIN'); // @todo config
+		if (!$amount_min)
+			$amount_min = 200;
+
+		if ($amount === NULL)
+			$amount = $object->total_ttc;
+		if ($amount < $amount_min)
+			return false;
+
+		return true;
 	}
 	
 	/* API LOGIN */
@@ -186,28 +257,15 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	public function api_personal_loan_create($objecttype, $objectid, $amount=NULL, $maturity=NULL)
 	{
 		$object = mmi_payments::loadobject($objecttype, $objectid);
-		//var_dump($object);
-		$societe = $object->thirdparty;
-		//$contact = $object->thirdparty->;
-		$contacts = $object->liste_contact(-1, 'external');
-		$contacts_ok = false;
-		$customer = new Contact($this->db);
-		foreach($contacts as $contact) {
-			$contacts_ok = true;
-			$customer->fetch($contact['id']);
-			//var_dump($contact, $customer); die();
-			break;
-		}
+		// Data
+		$data = $this->personal_data($object);
+
 		// Default params
 		if ($amount===NULL)
 			$amount = $object->total_ttc;
 		$amount = round($amount, 2);
 		if ($maturity===NULL)
 			$maturity = 24;
-
-		$address = !empty($customer) ?$customer->address :$societe->address;
-		$addressline1 = strlen($address) > 38 ?substr($address, 0, 38) :$address;
-		$addressline2 = strlen($address) > 38 ?substr($address, 38) :'';
 
 		$params = [
 			"loanRequest" => [
@@ -232,17 +290,17 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 				"apiVersion" => "2024-01-01", // $this->api_version,
 			],
 			"customerInformation" => [
-				"firstName" => !empty($customer) ?$customer->firstname :$societe->nom,
-				"lastName" => !empty($customer) ?$customer->lastname :$societe->nom,
-				"emailAddress" => !empty($customer) ?$customer->email :$societe->email,
-				"mobilePhoneNumber" => $this->tel_intl(!empty($customer) ?$customer->phone_mobile :$societe->phone),
+				"firstName" => $data['firstname'],
+				"lastName" => $data['lastname'],
+				"emailAddress" => $data['email'],
+				"mobilePhoneNumber" => $this->tel_intl($data['phone']),
 				//"birthDate" => "1990-02-20T00:00:00",
 				"postalAddress" => [
-					"AddressLine1" => $addressline1,
-					"AddressLine2" => $addressline2,
-					'city' => !empty($customer) ?$customer->town :$societe->town,
-					'postalCode' => !empty($customer) ?$customer->zip :$societe->zip,
-					'countryCode' => !empty($customer) ?$customer->country_code :$societe->country_code,
+					"AddressLine1" => $data['addressline1'],
+					"AddressLine2" => $data['addressline2'],
+					'city' => $data['town'],
+					'postalCode' => $data['zip'],
+					'countryCode' => $data['country_code'],
 				],
 			],
 			"riskInsights" => [

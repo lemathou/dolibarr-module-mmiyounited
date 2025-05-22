@@ -73,55 +73,62 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 		//var_dump($object->fin_validite, $time, empty($object->fin_validite) || $object->fin_validite < $time);
 
 		// Paiement normal complet
-		if (getDolGlobalInt('MMI_YOUNITED_ENABLE')) {
-			$amount = (!empty($parameters['amount']) ?$parameters['amount'] :$reste);
-			//var_dump(get_class($object), $object->id, $amount, 1, true);
-			// @todo securekey pas top
-			$securekey = GETPOST('securekey', 'alpha');
-			$link = $this->payment_service->payment_link($objecttype, $object->id, $securekey, round($amount, 2));
-			//var_dump($link); die();
+		if ( !getDolGlobalInt('MMI_YOUNITED_ENABLE'))
+			return 0;
+		if ($reste <= 0)
+			return 0;
+		if (!empty($object->fin_validite) && $object->fin_validite < $time)
+			return 0;
+		if (!$this->payment_service->payment_enable($object, $reste))
+			return 0;
+	
+		$amount = (!empty($parameters['amount']) ?$parameters['amount'] :$reste);
+		//var_dump(get_class($object), $object->id, $amount, 1, true);
+		// @todo securekey pas top
+		$securekey = GETPOST('securekey', 'alpha');
+		$link = $this->payment_service->payment_link($objecttype, $object->id, $securekey, round($amount, 2));
+		//var_dump($link); die();
 
-			$this->payment_service->api_shops();
-			$ret = $this->payment_service->api_personal_loans_offers($objecttype, $object->id);
-			
-			print '<div class="button buttonpayment" id="div_dopayment_mmiyounited">
-			<input class="" type="submit" id="dopayment_mmiyounited" name="dopayment_mmiyounited" value="'.$langs->trans("MMIYounitedDoPayment").'">';
-			print '<p style="margin-bottom: 0;">Achetez maintenant et payez à votre rythme</p>';
-			print '<span class="buttonpaymentsmall">
-			<img src="/custom/mmiyounited/img/younited-logo.png" alt="Younited Pay" class="img_cb" style="width: 50%;height: auto;" />
-			</span>';
-			$offers_show = [];
-			foreach($ret as $offer) {
-				$offers_show[$offer['characteristics']['maturityInMonths']] = $offer;
-			}
-			asort($offers_show);
-			//var_dump($offers_show);
-			echo '<p class="offer" style="margin:0;" data-maturity="6">De '.$offers_show[6]['characteristics']['maturityInMonths'].' mois pour <b>'.$offers_show[6]['details']['monthlyInstallmentAmount'].'/mois</b></p>';
-			echo '<p class="offer" style="margin:0;" data-maturity="84">à '.$offers_show[84]['characteristics']['maturityInMonths'].' mois pour <b>'.$offers_show[84]['details']['monthlyInstallmentAmount'].'/mois</b></p>';
-			echo '<div style="margin: 5px 20px;border: 1px purple solid;padding: 5px;background-color: #FAECFF;">';
-			echo '<p>Choisissez la durée de remboursement :</p>';
-			echo '<p><select class="offers" name="maturity"><option value="">Durée :</option>';
-			foreach($offers_show as $offer) {
-				$amount = $offer['details']['monthlyInstallmentAmount'];
-				$maturity = $offer['characteristics']['maturityInMonths'];
-				echo '<option value="'.$maturity.'">'.$maturity.' mois pour '.$amount.'&euro;/mois</option>';
-			}
-			echo '</select></p>';
-			echo '<div class="younitedpay_details">';
-			echo '<p>Montant à financer : <span class="enhance" id="younited_pay_mtcred"></span><br />';
-			echo 'Durée : <span class="enhance" id="younited_pay_duree"></span><br />';
-			echo 'Total mois : <span class="enhance" id="younited_pay_mtmois"></span></p>';
-			echo '<p>Montant du crédit : <span id="younited_pay_mt"></span><br />';
-			echo '+ intérêt du crédit : <span id="younited_pay_int"></span><br />';
-			echo '= montant total dû : <span id="younited_pay_du"></span></p>';
-			echo '<p>TAEG fixe : <span id="younited_pay_taeg"></span><br />';
-			echo 'Taux débiteur fixe : <span id="younited_pay_tx"></span></p>';
-			echo '</div>';
-			echo '<div id="div_dopayment_mmiyounited_real" class="button buttonpayment disabled"><p>Connectez simplement et de manière sécurisée votre compte bancaire</p></div>';
-			echo '</div>';
-			echo '<p style="font-size: 0.8em;">Un crédit vous engage et doit être remboursé. Vérifiez vos capacités de remboursement avant de vous engager.</p>';
-			print '</div>';
+		$this->payment_service->api_shops();
+		$ret = $this->payment_service->api_personal_loans_offers($objecttype, $object->id);
+		
+		print '<div class="button buttonpayment" id="div_dopayment_mmiyounited">
+		<input class="" type="submit" id="dopayment_mmiyounited" name="dopayment_mmiyounited" value="'.$langs->trans("MMIYounitedDoPayment").'">';
+		print '<p style="margin-bottom: 0;">Achetez maintenant et payez à votre rythme</p>';
+		print '<span class="buttonpaymentsmall">
+		<img src="/custom/mmiyounited/img/younited-logo.png" alt="Younited Pay" class="img_cb" style="width: 50%;height: auto;" />
+		</span>';
+		$offers_show = [];
+		foreach($ret as $offer) {
+			$offers_show[$offer['characteristics']['maturityInMonths']] = $offer;
 		}
+		asort($offers_show);
+		//var_dump($offers_show);
+		echo '<p class="offer" style="margin:0;" data-maturity="12">De '.$offers_show[12]['characteristics']['maturityInMonths'].' mois pour <b>'.$offers_show[12]['details']['monthlyInstallmentAmount'].'/mois</b></p>';
+		echo '<p class="offer" style="margin:0;" data-maturity="84">à '.$offers_show[84]['characteristics']['maturityInMonths'].' mois pour <b>'.$offers_show[84]['details']['monthlyInstallmentAmount'].'/mois</b></p>';
+		echo '<div style="margin: 5px 20px;border: 1px purple solid;padding: 5px;background-color: #FAECFF;">';
+		echo '<p>Choisissez la durée de remboursement :</p>';
+		echo '<p><select class="offers" name="maturity"><option value="">Durée :</option>';
+		foreach($offers_show as $offer) {
+			$amount = $offer['details']['monthlyInstallmentAmount'];
+			$maturity = $offer['characteristics']['maturityInMonths'];
+			echo '<option value="'.$maturity.'">'.$maturity.' mois pour '.$amount.'&euro;/mois</option>';
+		}
+		echo '</select></p>';
+		echo '<div class="younitedpay_details">';
+		echo '<p>Montant à financer : <span class="enhance" id="younited_pay_mtcred"></span><br />';
+		echo 'Durée : <span class="enhance" id="younited_pay_duree"></span><br />';
+		echo 'Total mois : <span class="enhance" id="younited_pay_mtmois"></span></p>';
+		echo '<p>Montant du crédit : <span id="younited_pay_mt"></span><br />';
+		echo '+ intérêt du crédit : <span id="younited_pay_int"></span><br />';
+		echo '= montant total dû : <span id="younited_pay_du"></span></p>';
+		echo '<p>TAEG fixe : <span id="younited_pay_taeg"></span><br />';
+		echo 'Taux débiteur fixe : <span id="younited_pay_tx"></span></p>';
+		echo '</div>';
+		echo '<div id="div_dopayment_mmiyounited_real" class="button buttonpayment disabled"><p>Connectez simplement et de manière sécurisée votre compte bancaire</p></div>';
+		echo '</div>';
+		echo '<p style="font-size: 0.8em;">Un crédit vous engage et doit être remboursé. Vérifiez vos capacités de remboursement avant de vous engager.</p>';
+		print '</div>';
 
 		// var_dump($parameters['amount']);
 		// var_dump($object->array_options['options_acompte']);
