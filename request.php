@@ -1,5 +1,8 @@
 <?php
 
+if (!defined('NOLOGIN')) define("NOLOGIN", 1); // This means this output page does not require to be logged.
+if (!defined('NOCSRFCHECK')) define("NOCSRFCHECK", 1); // We accept to go on this page from external web site.
+
 require_once 'env.inc.php';
 require_once 'main_load.inc.php';
 
