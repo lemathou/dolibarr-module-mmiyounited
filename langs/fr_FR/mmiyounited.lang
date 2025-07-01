@@ -26,7 +26,6 @@ ModuleMMIYounitedDesc = Paiements par souscription de crédit via le prestataire
 # Admin page
 #
 MMIYounitedSetup = MMIYounited setup
-Settings = Settings
 MMIYounitedSetupPage = MMIYounited setup page
 
 MMI_YOUNITED_ENABLE = Activer le module de paiement
@@ -56,7 +55,6 @@ MMI_YOUNITED_NOTIFICATION_EMAIL_TO = Adresse email de destination
 #
 # About page
 #
-About = About
 MMIYounitedAbout = About MMIYounited
 MMIYounitedAboutPage = MMIYounited about page
 
