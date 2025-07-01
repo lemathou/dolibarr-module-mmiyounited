@@ -1,4 +1,4 @@
-# MMIYOUNITED FOR [DOLIBARR ERP CRM](https://www.dolibarr.org)
+# Younited Payment FOR [DOLIBARR ERP CRM](https://www.dolibarr.org)
 
 ## Features
 
