@@ -64,7 +64,7 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 
 		// var_dump($object);
 		// die();
-		$time = time();
+		$time = strtotime(date('Y-m-d'));
 
 		$objecttype = get_class($object);
 		$deja = mmi_payments::total_regle($objecttype, $object->id);
