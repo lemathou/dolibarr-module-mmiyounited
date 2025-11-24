@@ -7,3 +7,7 @@ Initial version
 ## 1.1
 
 Adds a separate maturity list free of charges for the client (cost paid by the supplier) depending on total price and margin.
+
+## 1.1.1
+
+Misc fixes

@@ -292,7 +292,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		if (empty($amount))
 			$amount = round($object->total_ttc, 2);
 
-		return $this->api_request('personal-loans-offers', ['Amount'=>$amount, 'ShopCode'=>$this->ShopCode, 'Maturity.list'=>$this->Maturity_list($object)]);
+		return $this->api_request('personal-loans-offers', ['Amount'=>round($amount, 2), 'ShopCode'=>$this->ShopCode, 'Maturity.list'=>$this->Maturity_list($object)]);
 	}
 
 	public function api_personal_loan_create($objecttype, $objectid, $amount=NULL, $maturity=NULL)
