@@ -90,7 +90,7 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 		//var_dump($link); die();
 
 		$this->payment_service->api_shops();
-		$ret = $this->payment_service->api_personal_loans_offers($objecttype, $object->id);
+		$ret = $this->payment_service->api_personal_loans_offers($objecttype, $object->id, $amount);
 		
 		print '<div class="button buttonpayment" id="div_dopayment_mmiyounited">
 		<input class="" type="submit" id="dopayment_mmiyounited" name="dopayment_mmiyounited" value="'.$langs->trans("MMIYounitedDoPayment").'">';

@@ -91,6 +91,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 	protected $MaturityDefaultList = '12,24,36,48,60,72,84,96';
 	protected $MaturityFreeEnabled = false;
+	protected $MaturityFreePercentageRate = 6;
 	protected $MaturityFreeList = '10';
 	protected $MaturityFreeAmountMin = '1000';
 	protected $MaturityFreeCoeffMin = '1.35';
@@ -285,10 +286,11 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		return $this->MaturityDefaultList.','.$this->MaturityFreeList;
 	}
 
-	public function api_personal_loans_offers($objecttype, $objectid, $params=[])
+	public function api_personal_loans_offers($objecttype, $objectid, $amount=NULL, $params=[])
 	{
 		$object = mmi_payments::loadobject($objecttype, $objectid);
-		$amount = round($object->total_ttc, 2);
+		if (empty($amount))
+			$amount = round($object->total_ttc, 2);
 
 		return $this->api_request('personal-loans-offers', ['Amount'=>$amount, 'ShopCode'=>$this->ShopCode, 'Maturity.list'=>$this->Maturity_list($object)]);
 	}
