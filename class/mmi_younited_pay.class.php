@@ -89,9 +89,13 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	protected $token;
 	protected $api_url;
 
-	protected $ShopCode;
 	protected $MaturityDefaultList = '12,24,36,48,60,72,84,96';
+	protected $MaturityFreeEnabled = false;
+	protected $MaturityFreeList = '10';
+	protected $MaturityFreeAmountMin = '1000';
+	protected $MaturityFreeCoeffMin = '1.35';
 
+	protected $ShopCode;
 	protected $ShopEmail;
 	protected $ShopReference;
 	protected $MerchantReference;
@@ -123,6 +127,15 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$this->MerchantReference = $this->sandbox_mode ?$conf->global->MMI_YOUNITED_API_SANDBOX_MERCHANT_REF :$conf->global->MMI_YOUNITED_API_PRODUCTION_MERCHANT_REF;
 		$this->payment_mode = $conf->global->MMI_YOUNITED_PAYMENT_MODE;
 		$this->account_id = $conf->global->MMI_YOUNITED_ACCOUNT_ID;
+
+		// Maturity and free list
+		$this->MaturityDefaultList = getDolGlobalString('MMI_YOUNITED_MATURITY_LIST', $this->MaturityDefaultList);
+		$this->MaturityFreeEnabled = getDolGlobalInt('MMI_YOUNITED_MATURITY_FREE_ENABLED', 1);
+		$this->MaturityFreeList = getDolGlobalString('MMI_YOUNITED_MATURITY_FREE_LIST', $this->MaturityFreeList);
+		$this->MaturityFreeAmountMin = getDolGlobalInt('MMI_YOUNITED_MATURITY_FREE_AMOUNT_MIN', $this->MaturityFreeAmountMin);
+		$this->MaturityFreeCoeffMin = (float)getDolGlobalString('MMI_YOUNITED_MATURITY_FREE_COEFF_MIN', $this->MaturityFreeCoeffMin);
+
+		//var_dump($this);
 	}
 
 	/* DATA & TEST */
@@ -246,12 +259,38 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	
 	/* API PAYMENT */
 
+	public function maturity_list($object)
+	{
+		//var_dump($object); die();
+
+		if ((! $this->MaturityFreeEnabled) || empty($this->MaturityFreeList))
+			return $this->MaturityDefaultList;
+
+		$buy_ht = 0;
+		$sell_ht = 0;
+		$margin_ht = 0;
+		foreach($object->lines as $line) {
+			$buy_ht += $line->pa_ht*$line->qty;
+			$sell_ht += $line->total_ht;
+			//var_dump($line->pa_ht*$line->qty, $line->total_ht);
+		}
+		$margin_ht = $sell_ht - $buy_ht;
+		$margin_coeff = $buy_ht > 0 ?($sell_ht / $buy_ht) :NULL;
+		//var_dump($buy_ht, $sell_ht, $margin_coeff);
+		//die();
+
+		if ($sell_ht < $this->MaturityFreeAmountMin || $margin_coeff < $this->MaturityFreeCoeffMin)
+			return $this->MaturityDefaultList;
+		
+		return $this->MaturityDefaultList.','.$this->MaturityFreeList;
+	}
+
 	public function api_personal_loans_offers($objecttype, $objectid, $params=[])
 	{
 		$object = mmi_payments::loadobject($objecttype, $objectid);
 		$amount = round($object->total_ttc, 2);
 
-		return $this->api_request('personal-loans-offers', ['Amount'=>$amount, 'ShopCode'=>$this->ShopCode, 'Maturity.list'=>$this->MaturityDefaultList]);
+		return $this->api_request('personal-loans-offers', ['Amount'=>$amount, 'ShopCode'=>$this->ShopCode, 'Maturity.list'=>$this->Maturity_list($object)]);
 	}
 
 	public function api_personal_loan_create($objecttype, $objectid, $amount=NULL, $maturity=NULL)

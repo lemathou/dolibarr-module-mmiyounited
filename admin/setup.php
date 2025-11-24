@@ -61,6 +61,13 @@ $arrayofparameters = array(
 	'MMI_YOUNITED_API_SANDBOX_SHOPCODE'=>array('type'=>'string','enabled'=>1),
 	'MMI_YOUNITED_API_SANDBOX_MERCHANT_REF'=>array('type'=>'string','enabled'=>1),
 	//'MMI_YOUNITED_API_SANDBOX_TOKEN'=>array('type'=>'securekey', 'enabled'=>1),
+
+	'MMI_YOUNITED_MATURITIES'=>array('type'=>'separator', 'enabled'=>1),
+	'MMI_YOUNITED_MATURITY_LIST'=>array('type'=>'string', 'enabled'=>1),
+	'MMI_YOUNITED_MATURITY_FREE_ENABLED'=>array('type'=>'yesno', 'enabled'=>1),
+	'MMI_YOUNITED_MATURITY_FREE_LIST'=>array('type'=>'string', 'enabled'=>1),
+	'MMI_YOUNITED_MATURITY_FREE_AMOUNT_MIN'=>array('type'=>'int', 'enabled'=>1),
+	'MMI_YOUNITED_MATURITY_FREE_COEFF_MIN'=>array('type'=>'number', 'enabled'=>1),
 );
 
 require_once('../../mmicommon/admin/mmisetup_1.inc.php');
