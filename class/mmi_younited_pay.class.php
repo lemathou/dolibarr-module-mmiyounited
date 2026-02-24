@@ -328,7 +328,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			],
 			"technicalInformation" => [
 				"webhookNotificationUrl" => $this->webhook_url,
-				"apiVersion" => "2024-01-01", // $this->api_version,
+				"apiVersion" => $this->api_version,
 			],
 			"customerInformation" => [
 				"firstName" => $data['firstname'],

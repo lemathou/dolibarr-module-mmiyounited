@@ -11,3 +11,8 @@ Adds a separate maturity list free of charges for the client (cost paid by the s
 ## 1.1.1
 
 Misc fixes
+
+## 1.1.2
+
+Fix api_vesion to 2025-01-01
+
