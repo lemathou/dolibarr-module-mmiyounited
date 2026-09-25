@@ -16,3 +16,6 @@ Misc fixes
 
 Fix api_vesion to 2025-01-01
 
+## 1.1.3
+
+Public payment page: Younited Pay button displayed after E-Transactions (card) and PayPal, before transfer and cheque (hook priority 70 + JS placement after the PayPal button) — RM3307

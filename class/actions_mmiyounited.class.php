@@ -10,6 +10,13 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 {
 	const MOD_NAME = 'mmiyounited';
 
+	// Rang d'exécution des hooks (défaut Dolibarr : 50 ; plus grand = exécuté plus tard).
+	// 70 place Younited Pay APRÈS E-Transactions (mbietransactions, 60) sur la page
+	// publique de paiement (hook doAddButton). Le bouton PayPal du coeur, imprimé après
+	// les hooks, est rattrapé en JS dans doaddButton(). Ordre visé : CB, PayPal,
+	// Younited, puis virement et chèque (renvoyés en fin de page par mmipayments). RM3307.
+	public $priority = 70;
+
 	protected $payment_service;
 
 	public function __construct($db)
@@ -163,6 +170,12 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 			echo 'offers["'.$maturity.'"] = '.json_encode($offer).';';
 		}
 		echo '$( document ).ready(function() {
+				// Ordre (RM3307) : le bouton PayPal du coeur Dolibarr est imprimé après tous
+				// les hooks doAddButton ; on replace Younited juste après lui (virement et
+				// chèque sont déjà renvoyés en fin de page par mmipayments).
+				if ($("#div_dopayment_paypal").length)
+					$("#div_dopayment_mmiyounited").detach().insertAfter("#div_dopayment_paypal");
+
 				var younitedpay_link = \''.$link.'\';
 				$("#div_dopayment_mmiyounited p.offer").click(function(e){
 					let maturity = $(this).data("maturity");
