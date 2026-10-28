@@ -355,8 +355,11 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 		$_SESSION['younited_payment_id'] = $response['paymentId'];
 		$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'younitedpay (objecttype, fk_object, amount, maturity, payment_id, payment_status)
-			VALUES ("'.strtolower($objecttype).'", '.$objectid.', '.$amount.', '.$maturity.', "'.$response['paymentId'].'", "created")';
+			VALUES ("'.$this->db->escape(strtolower($objecttype)).'", '.((int) $objectid).', '.((float) $amount).', '.((int) $maturity).', "'.$this->db->escape($response['paymentId']).'", "created")';
 		$q = $this->db->query($sql);
+		if (!$q) {
+			$this->errors[] = $this->db->lasterror();
+		}
 		
 		return $response;
 	}
@@ -464,7 +467,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 	public function payment_id_info($id)
 	{
-		$sql = 'SELECT * FROM '.MAIN_DB_PREFIX.'younitedpay WHERE payment_id="'.$id.'"';
+		$sql = 'SELECT * FROM '.MAIN_DB_PREFIX.'younitedpay WHERE payment_id="'.$this->db->escape($id).'"';
 		$q = $this->db->query($sql);
 		
 		if ($q) {
@@ -592,16 +595,22 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'younitedpay_webhook_log
 			(`datec`, `payment_id`, `data`)
 			VALUES
-			(NOW(), "'.$id.'", "'.addslashes(json_encode($input)).'")';
+			(NOW(), "'.$this->db->escape($id).'", "'.$this->db->escape(json_encode($input)).'")';
 		$q = $this->db->query($sql);
+		if (!$q) {
+			$this->errors[] = $this->db->lasterror();
+		}
 
 		$data = $input['data'];
 		$status = $data['status'];
 		$updatedAt = str_replace('T', ' ', substr($data['updatedAt'], 0, 19));
 
 		if (true || $status != $payment->status) {
-			$sql = 'UPDATE '.MAIN_DB_PREFIX.'younitedpay SET payment_status="'.$status.'", payment_updatedat="'.$updatedAt.'" WHERE payment_id="'.$id.'"';
+			$sql = 'UPDATE '.MAIN_DB_PREFIX.'younitedpay SET payment_status="'.$this->db->escape($status).'", payment_updatedat="'.$this->db->escape($updatedAt).'" WHERE payment_id="'.$this->db->escape($id).'"';
 			$q = $this->db->query($sql);
+			if (!$q) {
+				$this->errors[] = $this->db->lasterror();
+			}
 		
 			// email accepted ?
 			// @todo attention paiement en doublon !!
