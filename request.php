@@ -19,14 +19,12 @@ $maturity = GETPOST('maturity', 'int');
 
 $younited_service = mmi_younited_pay::_instance();
 
-//var_dump($action, $objecttype, $objectid, $securekey);
 
 $object = mmi_payments::loadobject($objecttype, $objectid);
 if (empty($object)) {
 	echo 'Object not found';
 	exit;
 }
-//var_dump(mmi_payments::securekey($objecttype, $objectid));
 if ($securekey != mmi_payments::securekey($objecttype, $objectid)) {
 	echo 'Securekey not valid';
 	exit;
@@ -39,14 +37,8 @@ $token = $younited_service->api_token();
 
 $younited_service->api_shops();
 $payment = $younited_service->api_personal_loan_create($objecttype, $objectid, $amount, $maturity ?:12);
-if ($mmi_younited_debug)
-	var_dump($payment);
 $payment_info = $younited_service->api_payment_info($payment['paymentId']);
-if ($mmi_younited_debug)
-	var_dump($payment_info);
 $payment_status = $younited_service->api_payment_status($payment['paymentId']);
-if ($mmi_younited_debug)
-	var_dump($payment_status);
 
 if (!empty($payment['paymentLink'])) {
 	header('Location: '.$payment['paymentLink']);

@@ -29,7 +29,6 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 		// $this->module_position = 100;
 
 		$this->payment_service = mmi_younited_pay::_instance();
-		//var_dump($this->payment_service); die();
 	}
 
 	// Payment page
@@ -68,15 +67,11 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 	{
 		global $db, $langs, $conf;
 
-		// var_dump($object);
-		// die();
 		$time = strtotime(date('Y-m-d'));
 
 		$objecttype = get_class($object);
 		$deja = mmi_payments::total_regle($objecttype, $object->id);
-		//var_dump($deja);
 		$reste = ($deja>0 ?max(0, round($object->total_ttc-$deja, 2)) :$object->total_ttc);
-		//var_dump($object->fin_validite, $time, empty($object->fin_validite) || $object->fin_validite < $time);
 
 		// Paiement normal complet
 		if ( !getDolGlobalInt('MMI_YOUNITED_ENABLE'))
@@ -89,11 +84,9 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 			return 0;
 	
 		$amount = (!empty($parameters['amount']) ?$parameters['amount'] :$reste);
-		//var_dump(get_class($object), $object->id, $amount, 1, true);
 		// @todo securekey pas top
 		$securekey = GETPOST('securekey', 'alpha');
 		$link = $this->payment_service->payment_link($objecttype, $object->id, $securekey, round($amount, 2));
-		//var_dump($link); die();
 
 		$this->payment_service->api_shops();
 		$ret = $this->payment_service->api_personal_loans_offers($objecttype, $object->id, $amount);
@@ -109,7 +102,6 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 			$offers_show[$offer['characteristics']['maturityInMonths']] = $offer;
 		}
 		asort($offers_show);
-		//var_dump($offers_show);
 		echo '<p class="offer" style="margin:0;" data-maturity="12">De '.$offers_show[12]['characteristics']['maturityInMonths'].' mois pour <b>'.$offers_show[12]['details']['monthlyInstallmentAmount'].'/mois</b></p>';
 		echo '<p class="offer" style="margin:0;" data-maturity="84">à '.$offers_show[84]['characteristics']['maturityInMonths'].' mois pour <b>'.$offers_show[84]['details']['monthlyInstallmentAmount'].'/mois</b></p>';
 		echo '<div style="margin: 5px 20px;border: 1px purple solid;padding: 5px;background-color: #FAECFF;">';
@@ -136,9 +128,6 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 		echo '<p style="font-size: 0.8em;">Un crédit vous engage et doit être remboursé. Vérifiez vos capacités de remboursement avant de vous engager.</p>';
 		print '</div>';
 
-		// var_dump($parameters['amount']);
-		// var_dump($object->array_options['options_acompte']);
-		// var_dump($object->total_ttc);
 
 		print '<style type="text/css">
 		#div_dopayment_mmiyounited.buttonpayment {
@@ -209,7 +198,6 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 	// Payment means
 	function doValidatePayment($parameters, &$object, &$action, $hookmanager)
 	{
-		//var_dump($parameters); var_dump(get_class($object)); var_dump($action);
 		$parameters['validpaymentmethod']['mmiyounited'] = true;
 
 		return 0;
@@ -219,7 +207,6 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 	function doPayment($parameters, &$object, &$action, $hookmanager)
 	{
 		global $db, $conf, $mysoc, $user;
-		//var_dump($mysoc); die();
 		//echo $parameters['paymentmethod'];
 
 		// A Conserver ?

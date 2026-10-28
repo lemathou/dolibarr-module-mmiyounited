@@ -112,7 +112,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		if (!$user || !$user->id) {
 			$user = new User($this->db);
 			$user->fetch(getDolGlobalInt('MMI_YOUNITED_USER_ID')); // Admin @todo créer user spécifique pour trucs auto ?
-			//var_dump($user);
 		}
 
 		$this->website_url = 'https://'.$_SERVER['SERVER_NAME'];
@@ -136,7 +135,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$this->MaturityFreeAmountMin = getDolGlobalInt('MMI_YOUNITED_MATURITY_FREE_AMOUNT_MIN', $this->MaturityFreeAmountMin);
 		$this->MaturityFreeCoeffMin = (float)getDolGlobalString('MMI_YOUNITED_MATURITY_FREE_COEFF_MIN', $this->MaturityFreeCoeffMin);
 
-		//var_dump($this);
 	}
 
 	/* DATA & TEST */
@@ -152,7 +150,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		foreach($contacts as $contact) {
 			$customer = new Contact($this->db);
 			$customer->fetch($contact['id']);
-			//var_dump($contact, $customer); die();
 			break;
 		}
 
@@ -238,7 +235,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			'client_id' => $this->username,
 			'client_secret' => $this->password
 		);
-		//var_dump($login_url, $username, $password, $post_data); die();
 
 		$response = $this->curl_request('POST', $this->login_url, $post_data, ['Content-Type: application/x-www-form-urlencoded']);
 		if (! isset($response['access_token'])) {
@@ -262,7 +258,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 	public function maturity_list($object)
 	{
-		//var_dump($object); die();
 
 		if ((! $this->MaturityFreeEnabled) || empty($this->MaturityFreeList))
 			return $this->MaturityDefaultList;
@@ -273,11 +268,9 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		foreach($object->lines as $line) {
 			$buy_ht += $line->pa_ht*$line->qty;
 			$sell_ht += $line->total_ht;
-			//var_dump($line->pa_ht*$line->qty, $line->total_ht);
 		}
 		$margin_ht = $sell_ht - $buy_ht;
 		$margin_coeff = $buy_ht > 0 ?($sell_ht / $buy_ht) :NULL;
-		//var_dump($buy_ht, $sell_ht, $margin_coeff);
 		//die();
 
 		if ($sell_ht < $this->MaturityFreeAmountMin || $margin_coeff < $this->MaturityFreeCoeffMin)
@@ -353,12 +346,8 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 				"customerRedirectUrl" => $this->website_url."/custom/mmiyounited/return.php",
 			]
 		];
-		if (static::API_DEBUG)
-			var_dump($params);
 
 		$response = $this->api_request('personal-loan-create', $params);
-		if (static::API_DEBUG)
-			var_dump($response);
 		if (! isset($response['paymentId'])) {
 			echo 'Error: ' . $response;
 			return;
@@ -368,8 +357,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'younitedpay (objecttype, fk_object, amount, maturity, payment_id, payment_status)
 			VALUES ("'.strtolower($objecttype).'", '.$objectid.', '.$amount.', '.$maturity.', "'.$response['paymentId'].'", "created")';
 		$q = $this->db->query($sql);
-		if (static::API_DEBUG)
-			var_dump($q, $this->db);
 		
 		return $response;
 	}
@@ -470,8 +457,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		}
 
 		$response = $this->curl_request($route_info['method'], $url, $data, $headers);
-		if (static::API_DEBUG)
-			var_dump($response);
 		return $response;
 	}
 
@@ -481,8 +466,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 	{
 		$sql = 'SELECT * FROM '.MAIN_DB_PREFIX.'younitedpay WHERE payment_id="'.$id.'"';
 		$q = $this->db->query($sql);
-		if (static::API_DEBUG)
-			var_dump($q, $this->db);
 		
 		if ($q) {
 			return $this->db->fetch_object($q);
@@ -498,14 +481,11 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$ch = curl_init();
 
 		$headers = array_merge([], $headers);
-		if (static::CURL_DEBUG)
-			var_dump($type, $url, $data, $headers);
 
 		if ($type =='POST') {
 			curl_setopt($ch, CURLOPT_URL, $url);
 			curl_setopt($ch, CURLOPT_POST, 1);
 			if (!empty($headers) && in_array('Content-Type: application/json', $headers)) {
-				//var_dump($headers, json_encode($data)); die();
 				curl_setopt($ch, CURLOPT_POSTFIELDS, is_array($data) ?json_encode($data) :$data);
 			}
 			else {
@@ -516,8 +496,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		}
 		else {
 			curl_setopt($ch, CURLOPT_URL, $url.'?'.(is_array($data) ?http_build_query($data) :$data));
-			if (static::CURL_DEBUG)
-				var_dump($url.'?'.http_build_query($data));
 		}
 		
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
@@ -528,8 +506,6 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		if (static::CURL_DEBUG)
 			echo '<pre>'.htmlspecialchars($server_output).'</pre>';
 		$response = json_decode($server_output, true);
-		if (static::CURL_DEBUG)
-			var_dump($response);
 		curl_close ($ch);
 
 		return $response;
@@ -621,14 +597,11 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 		$data = $input['data'];
 		$status = $data['status'];
-		//var_dump($status);
 		$updatedAt = str_replace('T', ' ', substr($data['updatedAt'], 0, 19));
 
 		if (true || $status != $payment->status) {
 			$sql = 'UPDATE '.MAIN_DB_PREFIX.'younitedpay SET payment_status="'.$status.'", payment_updatedat="'.$updatedAt.'" WHERE payment_id="'.$id.'"';
 			$q = $this->db->query($sql);
-			if (static::API_DEBUG)
-				var_dump($q, $this->db);
 		
 			// email accepted ?
 			// @todo attention paiement en doublon !!
@@ -660,12 +633,9 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			
 				// Modification statut
 				if($objecttype == 'Propal') {
-					//var_dump($user, $object::STATUS_SIGNED);
 					if (! in_array($object->status, [2, 4])) // $object::STATUS_SIGNED OR $object::STATUS_BILLED
 						$r = $object->closeProposal($user, $object::STATUS_SIGNED, 'Suite paiement Younited Pay');
-					//var_dump($r);
 				}
-				//var_dump($r);
 			}
 			elseif ($status == 'Cancelled') {
 				// email cancel
