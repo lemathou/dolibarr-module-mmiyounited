@@ -10,6 +10,12 @@ class ActionsMMIYounited extends MMI_Actions_1_0
 {
 	const MOD_NAME = 'mmiyounited';
 
+	// Rang d'exécution des hooks (défaut Dolibarr : 50 ; plus grand = exécuté plus tard).
+	// 70 place Younited Pay APRÈS E-Transactions (mbietransactions, 60) sur la page
+	// publique de paiement (hook doAddButton) : CB, Younited, puis virement et chèque
+	// (renvoyés en fin de page par mmipayments). RM3307.
+	public $priority = 70;
+
 	protected $payment_service;
 
 	public function __construct($db)
