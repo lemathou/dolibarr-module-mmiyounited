@@ -578,8 +578,14 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 		$objecttype = $payment->objecttype;
 		$objectid = $payment->fk_object;
 		$object = mmi_payments::loadobject($objecttype, $objectid);
+		if (empty($object) || empty($object->id)) {
+			$this->errors[] = 'Error: Webhook object not found';
+			return;
+		}
 		$object_url = mmi_payments::object_url($objecttype, $objectid);
-		$client = $object->thirdparty;
+		// Pour un tiers, l'objet est lui-même le client.
+		$client = !empty($object->thirdparty) ? $object->thirdparty : $object;
+		$object_ref = !empty($object->ref) ? $object->ref : $object->name;
 
 		// LOG
 		$sql = 'INSERT INTO '.MAIN_DB_PREFIX.'younitedpay_webhook_log
@@ -591,11 +597,20 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			$this->errors[] = $this->db->lasterror();
 		}
 
-		$data = $input['data'];
-		$status = $data['status'];
-		$updatedAt = str_replace('T', ' ', substr($data['updatedAt'], 0, 19));
+		// Le corps du webhook n'est pas authentifié : on ne fait jamais confiance au
+		// statut qu'il contient. On interroge l'API Younited pour obtenir le statut
+		// faisant foi (et l'horodatage associé).
+		$remote = $this->api_payment_status($id);
+		if (empty($remote) || !is_array($remote) || empty($remote['status'])) {
+			$this->errors[] = 'Error: unable to confirm payment status from Younited';
+			return;
+		}
+		$status = (string) $remote['status'];
+		$updatedAt = !empty($remote['updatedAt'])
+			? str_replace('T', ' ', substr($remote['updatedAt'], 0, 19))
+			: date('Y-m-d H:i:s');
 
-		if (true || $status != $payment->status) {
+		if ($status != $payment->status) {
 			$sql = 'UPDATE '.MAIN_DB_PREFIX.'younitedpay SET payment_status="'.$this->db->escape($status).'", payment_updatedat="'.$this->db->escape($updatedAt).'" WHERE payment_id="'.$this->db->escape($id).'"';
 			$q = $this->db->query($sql);
 			if (!$q) {
@@ -607,7 +622,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			// Email message
 			$email_info = 'Notificatiuon de statut de paiement Younited Pay : '.$status."\r\n"
 			.'Payment Id: '.$id."\r\n"
-			.'Réf: '.$object->ref."\r\n"
+			.'Réf: '.$object_ref."\r\n"
 			.'Mt: '.$payment->amount."\r\n"
 			."\r\n"
 			.'Client Réf: '.$client->code_client."\r\n"
@@ -616,7 +631,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			."Rendez-vous dans le Backoffice :\r\n- ".$object_url."\r\n";
 			// Send email
 			$this->notification_email($object,
-					$objecttype.' '.$object->ref.' : Notification Younited Pay : '.$status,
+					$objecttype.' '.$object_ref.' : Notification Younited Pay : '.$status,
 					$email_info);
 
 			// Selon statut
@@ -628,7 +643,7 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 			}
 			elseif ($status == 'Executed') {
 				// Payment OK
-				$r = $this->payment_add($payment, ['updatedAt'=>$data['updatedAt']]);
+				$r = $this->payment_add($payment, ['updatedAt'=>$updatedAt]);
 			
 				// Modification statut
 				if($objecttype == 'Propal') {

@@ -17,11 +17,12 @@ $younited_service = mmi_younited_pay::_instance();
 
 
 $object = mmi_payments::loadobject($objecttype, $objectid);
-if (empty($object)) {
+if (empty($object) || empty($object->id)) {
 	echo 'Object not found';
 	exit;
 }
-if ($securekey != mmi_payments::securekey($objecttype, $objectid)) {
+$expected_securekey = mmi_payments::securekey($objecttype, $objectid);
+if (empty($securekey) || empty($expected_securekey) || !hash_equals((string) $expected_securekey, (string) $securekey)) {
 	echo 'Securekey not valid';
 	exit;
 }
