@@ -10,6 +10,7 @@ require_once DOL_DOCUMENT_ROOT.'/comm/propal/class/propal.class.php';
 
 dol_include_once('mmicommon/class/mmi_singleton.class.php');
 dol_include_once('mmipayments/class/mmi_payments.class.php');
+require_once __DIR__.'/mmi_younited_maturity.class.php';
 
 class mmi_younited_pay extends MMI_Singleton_2_0
 {
@@ -258,25 +259,14 @@ class mmi_younited_pay extends MMI_Singleton_2_0
 
 	public function maturity_list($object)
 	{
-
-		if ((! $this->MaturityFreeEnabled) || empty($this->MaturityFreeList))
-			return $this->MaturityDefaultList;
-
-		$buy_ht = 0;
-		$sell_ht = 0;
-		$margin_ht = 0;
-		foreach($object->lines as $line) {
-			$buy_ht += $line->pa_ht*$line->qty;
-			$sell_ht += $line->total_ht;
-		}
-		$margin_ht = $sell_ht - $buy_ht;
-		$margin_coeff = $buy_ht > 0 ?($sell_ht / $buy_ht) :NULL;
-		//die();
-
-		if ($sell_ht < $this->MaturityFreeAmountMin || $margin_coeff < $this->MaturityFreeCoeffMin)
-			return $this->MaturityDefaultList;
-		
-		return $this->MaturityDefaultList.','.$this->MaturityFreeList;
+		return mmi_younited_maturity::compute(
+			$this->MaturityFreeEnabled,
+			$this->MaturityFreeList,
+			$this->MaturityDefaultList,
+			$this->MaturityFreeAmountMin,
+			$this->MaturityFreeCoeffMin,
+			$object->lines
+		);
 	}
 
 	public function api_personal_loans_offers($objecttype, $objectid, $amount=NULL, $params=[])
