@@ -15,14 +15,12 @@ $amount = GETPOST('amount', 'alpha');
 
 $younited_service = mmi_younited_pay::_instance();
 
-//var_dump($action, $objecttype, $objectid, $securekey);
 
 $object = mmi_payments::loadobject($objecttype, $objectid);
 if (empty($object)) {
 	echo 'Object not found';
 	exit;
 }
-//var_dump(mmi_payments::securekey($objecttype, $objectid));
 if ($securekey != mmi_payments::securekey($objecttype, $objectid)) {
 	echo 'Securekey not valid';
 	exit;
@@ -35,5 +33,3 @@ $token = $younited_service->api_token();
 
 $younited_service->api_shops();
 $ret = $younited_service->api_personal_loans_offers($objecttype, $objectid);
-var_dump($ret);
-//var_dump($object);
