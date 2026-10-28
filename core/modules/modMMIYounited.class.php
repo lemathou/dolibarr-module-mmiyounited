@@ -277,6 +277,14 @@ class modMMIYounited extends DolibarrModules
 		// Permissions provided by this module
 		$this->rights = array();
 		$r = 0;
+		// Accueil du module
+		$this->menu[$r++] = array(
+			'fk_menu'=>'', 'type'=>'top', 'titre'=>'MMIYounitedHome',
+			'mainmenu'=>'mmiyounited', 'leftmenu'=>'',
+			'url'=>'/custom/mmiyounited/mmiyounitedindex.php',
+			'langs'=>'mmiyounited@mmiyounited', 'position'=>1000+$r,
+			'enabled'=>'$conf->mmiyounited->enabled', 'perms'=>'1', 'target'=>'', 'user'=>2,
+		);
 		// Add here entries to declare new permissions
 		/* BEGIN MODULEBUILDER PERMISSIONS */
 		/*

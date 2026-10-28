@@ -71,3 +71,6 @@ MyWidget = My widget
 MyWidgetDescription = My widget description
 
 MMIYounitedDoPayment = Payer avec Younited Pay
+MMIYounitedHome = Accueil
+MMIYounitedHomeIntro = Paiement en plusieurs fois via Younited Pay sur devis, commandes et factures.
+MMIYounitedHomeLinks = Accès rapides
