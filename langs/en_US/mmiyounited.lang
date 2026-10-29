@@ -63,3 +63,4 @@ MyWidgetDescription = My widget description
 MMIYounitedHome = Home
 MMIYounitedHomeIntro = Installment payment through Younited Pay on proposals, orders and invoices.
 MMIYounitedHomeLinks = Quick links
+MMIYounitedDescription=Younited Pay payment: loan/payment, offers, webhook and status tracking.
