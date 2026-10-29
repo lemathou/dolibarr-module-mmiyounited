@@ -1,96 +1,107 @@
-# Younited Payment FOR [DOLIBARR ERP CRM](https://www.dolibarr.org)
+# MMIYounited — Paiement Younited Pay : création de prêt/paiement, offres, redirection, webhook et suivi des statuts.
 
-## Features
+> Module Dolibarr **MMIYounited** (version 1.1.3), branche `20.0`.
 
-Description of the module...
+## Fonctionnalités
 
-<!--
-![Screenshot mmiyounited](img/screenshot_mmiyounited.png?raw=true "MMIYounited"){imgmd}
--->
+### Fonctionnalités principales
 
-Other external modules are available on [Dolistore.com](https://www.dolistore.com).
+- Création de prêt/paiement (`request.php`) et offres (`offers.php`) via l'API Younited (sandbox/production).
+- Webhook de mise à jour (`webhook.php`) : statut re-interrogé auprès de l'API, journal hors racine web (RM3580).
+- Retours client (`return.php`, `accepted.php`, `cancelled.php`) et suivi des maturités (`mmi_younited_maturity`).
+- Configuration API prod/sandbox (URL, identifiants, mot de passe webhook, shop code, merchant ref), mode de paiement, compte bancaire, notifications et maturités.
 
-## Translations
+### Écrans et menus
 
-Translations can be completed manually by editing files into directories *langs*.
+- **Accueil** — `/custom/mmiyounited/mmiyounitedindex.php` (menu mmiyounited, droit `1`)
 
-<!--
-This module contains also a sample configuration for Transifex, under the hidden directory [.tx](.tx), so it is possible to manage translation using this service.
+### Pages
 
-For more information, see the [translator's documentation](https://wiki.dolibarr.org/index.php/Translator_documentation).
+- `accepted.php`
+- `admin/about.php`
+- `admin/setup.php`
+- `cancelled.php`
+- `mmiyounitedindex.php`
+- `offers.php`
+- `request.php`
+- `return.php`
+- `webhook.php`
 
-There is a [Transifex project](https://transifex.com/projects/p/dolibarr-module-template) for this module.
--->
+### Configuration
 
+| Constante | Type | Rôle |
+|---|---|---|
+| `MMI_YOUNITED_ENABLE` | yesno | Activer le module de paiement |
+| `MMI_YOUNITED_API_MODE_SANDBOX` | yesno | Mode Sandbox (test) |
+| `MMI_YOUNITED_DEBUG` | yesno | Mode Debug (développeur) |
+| `MMI_YOUNITED_BANQ` | separator | Paramètres bancaires |
+| `MMI_YOUNITED_PAYMENT_MODE` | int | Mode de paiement |
+| `MMI_YOUNITED_ACCOUNT_ID` | int | Compte |
+| `MMI_YOUNITED_USER_ID` | int | Utilisateur validateur (admin auto) |
+| `MMI_YOUNITED_AMOUNT_MIN` | int | Montant minimum accepté |
+| `MMI_YOUNITED_NOTIFICATION` | separator | Notifications par Email |
+| `MMI_YOUNITED_NOTIFICATION_EMAIL_FROM` | string | Adresse email d'expéditeur |
+| `MMI_YOUNITED_NOTIFICATION_EMAIL_TO` | string | Adresse email de destination |
+| `MMI_YOUNITED_API_PRODUCTION` | separator | Environnement Production |
+| `MMI_YOUNITED_API_PRODUCTION_TOKEN_URL` | string | URL de récupération de token de production |
+| `MMI_YOUNITED_API_PRODUCTION_URL` | string | URL de production |
+| `MMI_YOUNITED_API_PRODUCTION_USERNAME` | string | Nom d'utilisateur production |
+| `MMI_YOUNITED_API_PRODUCTION_PASSWORD` | securekey | Mot de passe production |
+| `MMI_YOUNITED_API_PRODUCTION_WEBHOOK_PASSWORD` | securekey |  |
+| `MMI_YOUNITED_API_PRODUCTION_SHOPCODE` | string |  |
+| `MMI_YOUNITED_API_PRODUCTION_MERCHANT_REF` | string |  |
+| `MMI_YOUNITED_API_PRODUCTION_TOKEN` | securekey | Token de production (utile ?) |
+| `MMI_YOUNITED_API_SANDBOX` | separator | Environnement Sandbox |
+| `MMI_YOUNITED_API_SANDBOX_TOKEN_URL` | string | URL de récupération de token de sandbox |
+| `MMI_YOUNITED_API_SANDBOX_URL` | string | URL sandbox |
+| `MMI_YOUNITED_API_SANDBOX_USERNAME` | string | Nom d'utilisateur sandbox |
+| `MMI_YOUNITED_API_SANDBOX_PASSWORD` | securekey | Mot de passe sandbox |
+| `MMI_YOUNITED_API_SANDBOX_WEBHOOK_PASSWORD` | securekey |  |
+| `MMI_YOUNITED_API_SANDBOX_SHOPCODE` | string |  |
+| `MMI_YOUNITED_API_SANDBOX_MERCHANT_REF` | string |  |
+| `MMI_YOUNITED_API_SANDBOX_TOKEN` | securekey | Token sandbox (utile ?) |
+| `MMI_YOUNITED_MATURITIES` | separator |  |
+| `MMI_YOUNITED_MATURITY_LIST` | string |  |
+| `MMI_YOUNITED_MATURITY_FREE_ENABLED` | yesno |  |
+| `MMI_YOUNITED_MATURITY_FREE_LIST` | string |  |
+| `MMI_YOUNITED_MATURITY_FREE_AMOUNT_MIN` | int |  |
+| `MMI_YOUNITED_MATURITY_FREE_COEFF_MIN` | number |  |
+
+### Hooks
+
+- Contextes : `invoicecard`, `ordercard`, `propalcard`, `newpayment`
+- Callbacks : `doCheckStatus`, `addOnlinePaymentMeans`, `doaddButton`, `doValidatePayment`, `doPayment`
+
+### Classes et composants
+
+- `class/actions_mmiyounited.class.php`
+- `class/mmi_younited_maturity.class.php`
+- `class/mmi_younited_pay.class.php`
+- `class/younitedpay.class.php`
+- `class/younitedpay_webhooklog.class.php`
+- `lib/mmiyounited.lib.php`
+
+## Prérequis
+
+- Dolibarr >= 11.0 (branche `20.0` : Dolibarr 20.0).
+- Modules MMI : `mmicommon`, `mmipayments`. **`mmicommon` doit être activé en premier.**
 
 ## Installation
 
-Prerequisites: You must have the Dolibarr ERP CRM software installed. You can down it from [Dolistore.org](https://www.dolibarr.org).
-You can also get a ready to use instance in the cloud from htts://saas.dolibarr.org
+1. Copier le module dans `htdocs/custom/mmiyounited` :
 
+   ```sh
+   cd htdocs/custom
+   git clone <dépôt> mmiyounited
+   ```
 
-### From the ZIP file and GUI interface
+2. Dans Dolibarr : **Configuration → Modules**, activer d'abord `mmicommon`, puis ce module.
+3. Vérifier les permissions dans la fiche des utilisateurs concernés.
 
-If the module is a ready to deploy zip file, so with a name module_xxx-version.zip (like when downloading it from a market place like [Dolistore](https://www.dolistore.com)),
-go into menu ```Home - Setup - Modules - Deploy external module``` and upload the zip file.
+## Licence
 
-Note: If this screen tell you that there is no "custom" directory, check that your setup is correct:
+GPLv3 ou ultérieure — voir `COPYING`. Documentation sous GFDL.
 
-<!--
+## Changelog
 
-- In your Dolibarr installation directory, edit the ```htdocs/conf/conf.php``` file and check that following lines are not commented:
-
-    ```php
-    //$dolibarr_main_url_root_alt ...
-    //$dolibarr_main_document_root_alt ...
-    ```
-
-- Uncomment them if necessary (delete the leading ```//```) and assign a sensible value according to your Dolibarr installation
-
-    For example :
-
-    - UNIX:
-        ```php
-        $dolibarr_main_url_root_alt = '/custom';
-        $dolibarr_main_document_root_alt = '/var/www/Dolibarr/htdocs/custom';
-        ```
-
-    - Windows:
-        ```php
-        $dolibarr_main_url_root_alt = '/custom';
-        $dolibarr_main_document_root_alt = 'C:/My Web Sites/Dolibarr/htdocs/custom';
-        ```
--->
-
-<!--
-
-### From a GIT repository
-
-Clone the repository in ```$dolibarr_main_document_root_alt/mmiyounited```
-
-```sh
-cd ....../custom
-git clone git@github.com:gitlogin/mmiyounited.git mmiyounited
-```
-
--->
-
-### Final steps
-
-From your browser:
-
-  - Log into Dolibarr as a super-administrator
-  - Go to "Setup" -> "Modules"
-  - You should now be able to find and enable the module
-
-
-
-## Licenses
-
-### Main code
-
-GPLv3 or (at your option) any later version. See file COPYING for more information.
-
-### Documentation
-
-All texts and readmes are licensed under GFDL.
+Voir [CHANGELOG.md](CHANGELOG.md) (évolutions datées).
