@@ -74,3 +74,4 @@ MMIYounitedDoPayment = Payer avec Younited Pay
 MMIYounitedHome = Accueil
 MMIYounitedHomeIntro = Paiement en plusieurs fois via Younited Pay sur devis, commandes et factures.
 MMIYounitedHomeLinks = Accès rapides
+MMIYounitedDescription=Paiement Younited Pay : prêt/paiement, offres, webhook et suivi des statuts.
